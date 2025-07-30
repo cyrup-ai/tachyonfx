@@ -1,0 +1,57 @@
+//! tachyonfx - A ratatui library for creating shader-like effects in terminal UIs
+//!
+//! This library provides a collection of effects that can be used to enhance the visual
+//! appeal of terminal applications, offering capabilities such as color transformations,
+//! animations, and complex effect combinations.
+
+mod interpolation;
+mod effect;
+mod shader;
+mod effect_timer;
+mod cell_iter;
+mod color_mapper;
+mod color_ext;
+mod rect_ext;
+mod render_effect;
+mod motion;
+mod bounding_box;
+mod buffer_renderer;
+mod cell_filter;
+mod simple_rng;
+mod duration;
+mod features;
+mod effect_manager;
+mod color_space;
+mod lru_cache;
+
+pub mod fx;
+pub mod widget;
+
+#[cfg(feature = "dsl")]
+#[doc = include_str!("../docs/dsl.md")]
+pub mod dsl;
+
+/// `CellIterator` provides an iterator over terminal cells.
+pub use cell_iter::CellIterator;
+#[allow(deprecated)]
+pub use color_mapper::ColorMapper;
+pub use cell_filter::{CellFilter, CellPredicate};
+pub use effect::{Effect, IntoEffect};
+pub use effect_timer::EffectTimer;
+pub use rect_ext::CenteredShrink;
+pub use render_effect::EffectRenderer;
+pub use effect_manager::EffectManager;
+pub use shader::Shader;
+pub use interpolation::*;
+pub use buffer_renderer::*;
+pub use simple_rng::*;
+pub use duration::Duration;
+pub use motion::*;
+pub use features::{ref_count, RefCount, ThreadSafetyMarker};
+pub use lru_cache::LruCache;
+pub use color_space::*;
+pub use color_ext::ToRgbComponents;
+
+
+#[cfg(all(feature = "std-duration", feature = "web-time"))]
+compile_error!("Features 'std-duration' and 'web-time' cannot be enabled simultaneously");

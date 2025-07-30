@@ -1,0 +1,75 @@
+[package]
+name = "tachyonfx"
+version = "0.15.0"
+edition = "2021"
+license = "MIT"
+description = "A ratatui library for creating shader-like effects in TUIs."
+repository = "https://github.com/junkdog/tachyonfx"
+homepage = "https://github.com/junkdog/tachyonfx"
+documentation = "https://docs.rs/tachyonfx"
+readme = "README.md"
+keywords = ["ratatui", "terminal", "effects", "UI", "TUI"]
+categories = ["command-line-interface"]
+authors = ["Adrian Papari <junkdog@angelhill.net>"]
+exclude = ["images/*.gif", "docs/assets/*.gif", ".*", "scripts/*"]
+
+[dependencies]
+anpa = { version = "0.9.0", optional = true }
+bon = "3.6.3"
+colorsys = "0.6.7"
+compact_str = "0.9.0"
+ratatui = { version = "0.30.0-alpha.4", default-features = false }
+simple-easing = "1.0.1"
+thiserror = "2.0.12"
+web-time = { version = "1.1.0", optional = true }
+
+[dev-dependencies]
+regex = "1.11.1"
+indoc = "2.0.6"
+crossterm = "0.28.1"
+tui-textarea = "0.7.0"
+criterion = "0.6.0"
+
+[features]
+default = ["crossterm", "dsl"]
+crossterm = ["ratatui/crossterm"]
+dsl = ["dep:anpa"]
+sendable = []
+std-duration = []
+web-time = ["dep:web-time"]
+
+
+[[example]]
+name = "minimal"
+
+[[example]]
+# for fx module docs
+name = "effect-showcase"
+
+[[example]]
+name = "open-window"
+
+[[example]]
+name = "basic-effects"
+
+[[example]]
+name = "tweens"
+
+[[example]]
+name = "fx-chart"
+
+[[example]]
+name = "dsl-playground"
+required-features = ["dsl"]
+
+[[bench]]
+name = "color_interpolation"
+harness = false
+
+[[bench]]
+name = "color_conversion"
+harness = false
+
+[[bench]]
+name = "cell_filter"
+harness = false
