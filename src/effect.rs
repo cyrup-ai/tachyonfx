@@ -1,5 +1,5 @@
-use crate::widget::EffectSpan;
 use crate::shader::Shader;
+use crate::widget::EffectSpan;
 use crate::{CellFilter, ColorSpace, Duration, EffectTimer};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -21,9 +21,12 @@ impl Effect {
     /// # Returns
     /// * A new `Effect` instance.
     pub fn new<S>(shader: S) -> Self
-        where S: Shader + 'static
+    where
+        S: Shader + 'static,
     {
-        Self { shader: Box::new(shader) }
+        Self {
+            shader: Box::new(shader),
+        }
     }
 
     /// Creates a new `Effect` with the specified area.
@@ -58,7 +61,7 @@ impl Effect {
     /// /// # Notes
     /// This method only applies the filter if the effect doesn't already have a filter set,
     /// preserving any existing filters during effect composition.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use ratatui::style::Color;
@@ -78,7 +81,6 @@ impl Effect {
     pub fn with_cell_selection(&self, mode: CellFilter) -> Self {
         self.clone().with_filter(mode)
     }
-
 
     pub fn color_space(&self) -> ColorSpace {
         self.shader.color_space()
@@ -104,10 +106,11 @@ impl Effect {
     }
 }
 
-
 impl Clone for Effect {
     fn clone(&self) -> Self {
-        Self { shader: self.shader.clone_box() }
+        Self {
+            shader: self.shader.clone_box(),
+        }
     }
 }
 
@@ -178,26 +181,25 @@ impl Shader for Effect {
     }
 }
 
-
 pub trait IntoEffect {
     fn into_effect(self) -> Effect;
 }
 
 impl<S> IntoEffect for S
-    where S: Shader + 'static
+where
+    S: Shader + 'static,
 {
     fn into_effect(self) -> Effect {
         Effect::new(self)
     }
 }
 
-
 pub(crate) trait ShaderExt {
     /// Propagates the cell filter to the shader if it is not already set.
     fn propagate_filter(&mut self, cell_filter: CellFilter);
 }
 
-impl <S: Shader + 'static> ShaderExt for S {
+impl<S: Shader + 'static> ShaderExt for S {
     fn propagate_filter(&mut self, cell_filter: CellFilter) {
         if self.cell_filter().is_none() {
             self.filter(cell_filter);

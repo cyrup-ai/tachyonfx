@@ -11,7 +11,12 @@ pub(crate) struct BoundingBox {
 impl BoundingBox {
     #[allow(dead_code)]
     pub(crate) fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     pub(crate) fn from_rect(rect: Rect) -> Self {
@@ -25,25 +30,37 @@ impl BoundingBox {
 
     pub(crate) fn as_rect(&self, screen: Rect) -> Option<Rect> {
         match () {
-            _ if self.x + self.width < screen.x as f32  => None,
+            _ if self.x + self.width < screen.x as f32 => None,
             _ if self.y + self.height < screen.y as f32 => None,
             _ if self.x > (screen.x + screen.width) as f32 => None,
             _ if self.y > (screen.y + screen.height) as f32 => None,
             _ => {
-                let dx: u16 = if self.x < 0.0 { self.x.round().abs() } else { 0.0 } as _;
-                let dy: u16 = if self.y < 0.0 { self.y.round().abs() } else { 0.0 } as _;
+                let dx: u16 = if self.x < 0.0 {
+                    self.x.round().abs()
+                } else {
+                    0.0
+                } as _;
+                let dy: u16 = if self.y < 0.0 {
+                    self.y.round().abs()
+                } else {
+                    0.0
+                } as _;
                 Some(Rect::new(
                     self.x.max(0.0).round() as u16,
                     self.y.max(0.0).round() as u16,
                     self.width.round() as u16 - dx,
-                    self.height.round() as u16 - dy
+                    self.height.round() as u16 - dy,
                 ))
-            },
+            }
         }
     }
 
     pub fn translate(self, dx: f32, dy: f32) -> Self {
-        Self { x: self.x + dx, y: self.y + dy, ..self }
+        Self {
+            x: self.x + dx,
+            y: self.y + dy,
+            ..self
+        }
     }
 }
 

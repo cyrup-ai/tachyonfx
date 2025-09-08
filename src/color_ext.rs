@@ -27,8 +27,12 @@ impl ToRgbComponents for Color {
             Color::White => (192, 192, 192),
             Color::Indexed(code) => {
                 let rgb = colorsys::Ansi256::new(*code).as_rgb();
-                (rgb.red().round() as u8, rgb.green().round() as u8, rgb.blue().round() as u8)
-            },
+                (
+                    rgb.red().round() as u8,
+                    rgb.green().round() as u8,
+                    rgb.blue().round() as u8,
+                )
+            }
         }
     }
 }

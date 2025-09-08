@@ -38,9 +38,7 @@ impl Explode {
         }
     }
 
-    fn explosion_char(
-        alpha: f32,
-    ) -> char {
+    fn explosion_char(alpha: f32) -> char {
         // EXPLODED is 18 characters long
         let explosion_index = (alpha * 17.0).round() as usize;
         let explosion_char = EXPLODED.chars().nth(explosion_index).unwrap_or('X');
@@ -66,7 +64,8 @@ impl Shader for Explode {
             let center_x = area.x as f32 + area.width as f32 / 2.0;
             let center_y = area.y as f32 + area.height as f32 / 2.0;
 
-            let mut cells = Vec::with_capacity(safe_area.width as usize * safe_area.height as usize);
+            let mut cells =
+                Vec::with_capacity(safe_area.width as usize * safe_area.height as usize);
             for y in safe_area.top()..safe_area.bottom() {
                 for x in safe_area.left()..safe_area.right() {
                     let pos = Position::new(x, y);
@@ -85,13 +84,19 @@ impl Shader for Explode {
             }
 
             cells.sort_by(|(_, (dx, dy)), (_, (dx2, dy2))| {
-                (dx + dy).partial_cmp(&(dx2 + dy2)).unwrap_or(std::cmp::Ordering::Equal)
+                (dx + dy)
+                    .partial_cmp(&(dx2 + dy2))
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
 
             cells
         });
 
-        let cell_filter = self.cell_filter.as_ref().unwrap_or(&CellFilter::All).selector(safe_area);
+        let cell_filter = self
+            .cell_filter
+            .as_ref()
+            .unwrap_or(&CellFilter::All)
+            .selector(safe_area);
         for (pos, (dx, dy)) in cells.into_iter() {
             let pos = *pos;
             let (dx, dy) = (*dx, *dy);
@@ -123,7 +128,7 @@ impl Shader for Explode {
                     buf[new_pos].set_char(Self::explosion_char(alpha));
                 }
             }
-        };
+        }
     }
 
     #[cfg(feature = "dsl")]
@@ -139,10 +144,7 @@ impl Shader for Explode {
     }
 }
 
-fn into_pos(
-    x: f32,
-    y: f32,
-) -> Option<Position> {
+fn into_pos(x: f32, y: f32) -> Option<Position> {
     if x.is_sign_negative() || y.is_sign_negative() {
         None
     } else {

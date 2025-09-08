@@ -15,7 +15,10 @@ pub struct TemporaryEffect {
 
 impl TemporaryEffect {
     pub fn new(effect: Effect, duration: Duration) -> Self {
-        Self { effect, timer: EffectTimer::new(duration, Linear) }
+        Self {
+            effect,
+            timer: EffectTimer::new(duration, Linear),
+        }
     }
 }
 
@@ -24,12 +27,7 @@ impl Shader for TemporaryEffect {
         "with_duration"
     }
 
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect
-    ) -> Option<Duration> {
+    fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let remaining = self.timer.process(duration);
         let effect_area = self.effect.area().unwrap_or(area);
         self.effect.process(duration, buf, effect_area);
@@ -88,7 +86,8 @@ impl Shader for TemporaryEffect {
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::{DslFormat, EffectExpression};
-        EffectExpression::parse(&format!("fx::with_duration({}, {})",
+        EffectExpression::parse(&format!(
+            "fx::with_duration({}, {})",
             self.timer.duration().dsl_format(),
             self.effect.to_dsl()?
         ))
@@ -105,7 +104,6 @@ impl IntoTemporaryEffect for Effect {
     }
 }
 
-
 #[cfg(test)]
 #[cfg(feature = "dsl")]
 mod tests {
@@ -119,8 +117,11 @@ mod tests {
             .unwrap()
             .to_string();
 
-        assert_eq!(dsl.to_string(), indoc! {
-            "fx::with_duration(Duration::from_millis(1000), fx::sleep(100))"
-        });
+        assert_eq!(
+            dsl.to_string(),
+            indoc! {
+                "fx::with_duration(Duration::from_millis(1000), fx::sleep(100))"
+            }
+        );
     }
 }

@@ -2,7 +2,9 @@ use crate::dsl::arguments::Arguments;
 use crate::dsl::environment::DslEnv;
 use crate::dsl::expressions::{Expr, ExprSpan, FnCallInfo};
 use crate::dsl::method_chains::ChainableMethods;
+use crate::dsl::parse_error::DslParseError;
 use crate::dsl::token_parsers::parse_ast;
+use crate::dsl::token_verification::verify_tokens;
 use crate::dsl::tokenizer::{sanitize_tokens, tokenize};
 use crate::dsl::DslError;
 use crate::fx::{consume_tick, dissolve, never_complete, ping_pong, repeating};
@@ -10,8 +12,6 @@ use crate::{fx, Effect};
 use compact_str::CompactString;
 use std::fmt;
 use std::fmt::Formatter;
-use crate::dsl::parse_error::DslParseError;
-use crate::dsl::token_verification::verify_tokens;
 
 /// A compiler and registry for tachyonfx effect DSL expressions.
 ///
@@ -113,7 +113,7 @@ impl EffectDsl {
     pub fn register(
         self,
         name: &'static str,
-        compiler: impl Fn(&mut Arguments) -> Result<Effect, DslError> + 'static
+        compiler: impl Fn(&mut Arguments) -> Result<Effect, DslError> + 'static,
     ) -> Self {
         let mut this = self;
         this.compilers.push(EffectCompiler::new(name, compiler));
@@ -151,84 +151,99 @@ impl EffectDsl {
         }
     }
 
-    pub(super) fn compile(
-        &self,
-        env: &DslEnv,
-        input: Vec<Expr>
-    ) -> Result<Effect, DslError> {
+    pub(super) fn compile(&self, env: &DslEnv, input: Vec<Expr>) -> Result<Effect, DslError> {
         // compile expressions leading up to last
         let remaining_expr = self.compile_let_bindings(input, env)?;
 
         match remaining_expr {
-            Expr::FnCall { call: FnCallInfo { name, args, span }, self_fns, .. } => {
-
+            Expr::FnCall {
+                call: FnCallInfo { name, args, span },
+                self_fns,
+                ..
+            } => {
                 let effect_name = name.strip_prefix("fx::").unwrap_or(&name);
                 self.compilers
                     .iter()
                     .find(|d| d.effect_name == effect_name)
-                    .ok_or(DslError::UnknownEffect { name: effect_name.into(), location: ExprSpan::default() })
+                    .ok_or(DslError::UnknownEffect {
+                        name: effect_name.into(),
+                        location: ExprSpan::default(),
+                    })
                     .and_then(|d| {
                         let mut args = Arguments::new(args.into(), self, env, span);
                         let effect = (d.compile)(&mut args)?.fold_fns(self_fns, self, env);
 
                         match () {
                             _ if effect.is_err() => effect,
-                            _ if !args.remaining_args().is_empty() => Err(DslError::InvalidArgumentLength {
-                                expected: args.original_arg_count() - args.remaining_args().len(),
-                                actual: args.original_arg_count(),
-                                location: args.remaining_args().iter().next().unwrap().span(),
-                            }),
+                            _ if !args.remaining_args().is_empty() => {
+                                Err(DslError::InvalidArgumentLength {
+                                    expected: args.original_arg_count()
+                                        - args.remaining_args().len(),
+                                    actual: args.original_arg_count(),
+                                    location: args.remaining_args().iter().next().unwrap().span(),
+                                })
+                            }
                             _ => effect,
                         }
                     })
-            },
-            Expr::Sequence { effects, self_fns, span } => {
+            }
+            Expr::Sequence {
+                effects,
+                self_fns,
+                span,
+            } => {
                 let mut args = Arguments::new(effects.into(), self, env, span);
                 let effects = (0..args.remaining_arg_count())
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
-                fx::sequence(&effects)
-                    .fold_fns(self_fns, self, env)
-            },
-            Expr::Parallel { effects, self_fns, span } => {
+                fx::sequence(&effects).fold_fns(self_fns, self, env)
+            }
+            Expr::Parallel {
+                effects,
+                self_fns,
+                span,
+            } => {
                 let mut args = Arguments::new(effects.into(), self, env, span);
                 let effects = (0..args.remaining_arg_count())
                     .map(|_| args.effect())
                     .collect::<Result<Vec<Effect>, DslError>>()?;
 
-                fx::parallel(&effects)
-                    .fold_fns(self_fns, self, env)
-            },
-            Expr::Var { name, self_fns, span } => env.bound_var::<Effect>(self, name, span)
+                fx::parallel(&effects).fold_fns(self_fns, self, env)
+            }
+            Expr::Var {
+                name,
+                self_fns,
+                span,
+            } => env
+                .bound_var::<Effect>(self, name, span)
                 .and_then(|effect| effect.fold_fns(self_fns, self, env)),
             ref e => Err(DslError::InvalidExpression {
                 expected: "effect",
                 actual: remaining_expr.type_name(),
-                location: e.span()
+                location: e.span(),
             }),
         }
     }
 
-    fn compile_let_bindings(
-        &self,
-        expr: Vec<Expr>,
-        env: &DslEnv,
-    ) -> Result<Expr, DslError> {
+    fn compile_let_bindings(&self, expr: Vec<Expr>, env: &DslEnv) -> Result<Expr, DslError> {
         let mut expr = expr;
         let final_effect_expr = expr.remove(expr.len() - 1);
 
-        let err = expr.into_iter().map(|e| match e {
-            Expr::LetBinding { name, let_expr, .. } => {
-                env.bind_local(name.clone(), *let_expr);
-                None
-            }
-            e => Some(DslError::InvalidExpression {
-                expected: "let binding",
-                actual: e.type_name(),
-                location: e.span(),
-            }),
-        }).find(|e| e.is_some());
+        let err = expr
+            .into_iter()
+            .map(|e| match e {
+                Expr::LetBinding { name, let_expr, .. } => {
+                    env.bind_local(name.clone(), *let_expr);
+                    None
+                }
+                e => Some(DslError::InvalidExpression {
+                    expected: "let binding",
+                    actual: e.type_name(),
+                    location: e.span(),
+                }),
+            })
+            .find(|e| e.is_some());
 
         if let Some(Some(err)) = err {
             Err(err)
@@ -251,7 +266,6 @@ pub struct DslCompiler<'ctx> {
 }
 
 impl DslCompiler<'_> {
-
     /// Binds a value to a name in the compiler's environment.
     ///
     /// The bound value can then be referenced by name in DSL expressions.
@@ -306,41 +320,43 @@ impl DslCompiler<'_> {
 
 fn register_default_compilers(effect_dsl: EffectDsl) -> EffectDsl {
     effect_dsl
-        .register("term256_colors",       |_args| fx::term256_colors().into())
-        .register("coalesce",             compilers::coalesce)
-        .register("coalesce_from",        compilers::coalesce_from)
-        .register("consume_tick",         |_args| consume_tick().into())
-        .register("delay",                compilers::delay)
-        .register("dissolve",             |args| dissolve(args.effect_timer()?).into())
-        .register("dissolve_to",          compilers::dissolve_to)
-        .register("explode",              compilers::explode)
-        .register("fade_from",            compilers::fade_from)
-        .register("fade_from_fg",         compilers::fade_from_fg)
-        .register("fade_to",              compilers::fade_to)
-        .register("fade_to_fg",           compilers::fade_to_fg)
-        .register("freeze_at",            compilers::freeze_at)
-        .register("hsl_shift",            compilers::hsl_shift)
-        .register("hsl_shift_fg",         compilers::hsl_shift_fg)
-        .register("never_complete",       |args| never_complete(args.effect()?).into())
-        .register("ping_pong",            |args| ping_pong(args.effect()?).into())
-        .register("prolong_end",          compilers::prolong_end)
-        .register("prolong_start",        compilers::prolong_start)
-        .register("remap_alpha",          compilers::remap_alpha)
-        .register("repeat",               compilers::repeat)
-        .register("sleep",                compilers::sleep)
-        .register("repeating",            |args| repeating(args.effect()?).into())
-        .register("slide_in",             compilers::slide_in)
-        .register("slide_out",            compilers::slide_out)
-        .register("sweep_in",             compilers::sweep_in)
-        .register("sweep_out",            compilers::sweep_out)
-        .register("with_duration",        compilers::with_duration)
+        .register("term256_colors", |_args| fx::term256_colors().into())
+        .register("coalesce", compilers::coalesce)
+        .register("coalesce_from", compilers::coalesce_from)
+        .register("consume_tick", |_args| consume_tick().into())
+        .register("delay", compilers::delay)
+        .register("dissolve", |args| dissolve(args.effect_timer()?).into())
+        .register("dissolve_to", compilers::dissolve_to)
+        .register("explode", compilers::explode)
+        .register("fade_from", compilers::fade_from)
+        .register("fade_from_fg", compilers::fade_from_fg)
+        .register("fade_to", compilers::fade_to)
+        .register("fade_to_fg", compilers::fade_to_fg)
+        .register("freeze_at", compilers::freeze_at)
+        .register("hsl_shift", compilers::hsl_shift)
+        .register("hsl_shift_fg", compilers::hsl_shift_fg)
+        .register("never_complete", |args| {
+            never_complete(args.effect()?).into()
+        })
+        .register("ping_pong", |args| ping_pong(args.effect()?).into())
+        .register("prolong_end", compilers::prolong_end)
+        .register("prolong_start", compilers::prolong_start)
+        .register("remap_alpha", compilers::remap_alpha)
+        .register("repeat", compilers::repeat)
+        .register("sleep", compilers::sleep)
+        .register("repeating", |args| repeating(args.effect()?).into())
+        .register("slide_in", compilers::slide_in)
+        .register("slide_out", compilers::slide_out)
+        .register("sweep_in", compilers::sweep_in)
+        .register("sweep_out", compilers::sweep_out)
+        .register("with_duration", compilers::with_duration)
         .register("timed_never_complete", compilers::timed_never_complete)
 }
 
 impl EffectCompiler {
     fn new(
         name: &'static str,
-        compile: impl Fn(&mut Arguments) -> Result<Effect, DslError> + 'static
+        compile: impl Fn(&mut Arguments) -> Result<Effect, DslError> + 'static,
     ) -> Self {
         Self {
             effect_name: name,
@@ -348,7 +364,6 @@ impl EffectCompiler {
         }
     }
 }
-
 
 impl From<Effect> for Result<Effect, DslError> {
     fn from(effect: Effect) -> Self {
@@ -366,10 +381,7 @@ mod compilers {
     }
 
     pub(super) fn coalesce_from(args: &mut Arguments) -> Result<Effect, DslError> {
-        fx::coalesce_from(
-            args.style()?,
-            args.effect_timer()?
-        ).into()
+        fx::coalesce_from(args.style()?, args.effect_timer()?).into()
     }
 
     pub(super) fn explode(args: &mut Arguments) -> Result<Effect, DslError> {
@@ -377,52 +389,32 @@ mod compilers {
             args.read_into_f32()?,
             args.read_into_f32()?,
             args.effect_timer()?,
-        ).into()
+        )
+        .into()
     }
 
     pub(super) fn fade_to_fg(args: &mut Arguments) -> Result<Effect, DslError> {
-        fx::fade_to_fg(
-            args.color()?,
-            args.effect_timer()?
-        ).into()
+        fx::fade_to_fg(args.color()?, args.effect_timer()?).into()
     }
 
     pub(super) fn fade_from_fg(args: &mut Arguments) -> Result<Effect, DslError> {
-        fx::fade_from_fg(
-            args.color()?,
-            args.effect_timer()?
-        ).into()
+        fx::fade_from_fg(args.color()?, args.effect_timer()?).into()
     }
 
     pub(super) fn fade_to(args: &mut Arguments) -> Result<Effect, DslError> {
-        fx::fade_to(
-            args.color()?,
-            args.color()?,
-            args.effect_timer()?
-        ).into()
+        fx::fade_to(args.color()?, args.color()?, args.effect_timer()?).into()
     }
-    
+
     pub(super) fn freeze_at(args: &mut Arguments) -> Result<Effect, DslError> {
-        fx::freeze_at(
-            args.read_into_f32()?,
-            args.read_bool()?,
-            args.effect()?
-        ).into()
+        fx::freeze_at(args.read_into_f32()?, args.read_bool()?, args.effect()?).into()
     }
 
     pub(super) fn dissolve_to(args: &mut Arguments) -> Result<Effect, DslError> {
-        fx::dissolve_to(
-            args.style()?,
-            args.effect_timer()?
-        ).into()
+        fx::dissolve_to(args.style()?, args.effect_timer()?).into()
     }
 
     pub(super) fn fade_from(args: &mut Arguments) -> Result<Effect, DslError> {
-        fx::fade_from(
-            args.color()?,
-            args.color()?,
-            args.effect_timer()?
-        ).into()
+        fx::fade_from(args.color()?, args.color()?, args.effect_timer()?).into()
     }
 
     pub(super) fn hsl_shift(args: &mut Arguments) -> Result<Effect, DslError> {
@@ -438,10 +430,10 @@ mod compilers {
             }
         };
 
-        let fg: Option<[f32; 3]> = args
-            .option(|args| into_array(args.array(Arguments::read_into_f32)?))?;
-        let bg: Option<[f32; 3]> = args
-            .option(|args| into_array(args.array(Arguments::read_into_f32)?))?;
+        let fg: Option<[f32; 3]> =
+            args.option(|args| into_array(args.array(Arguments::read_into_f32)?))?;
+        let bg: Option<[f32; 3]> =
+            args.option(|args| into_array(args.array(Arguments::read_into_f32)?))?;
 
         fx::hsl_shift(fg, bg, args.effect_timer()?).into()
     }
@@ -461,8 +453,9 @@ mod compilers {
 
         fx::hsl_shift_fg(
             into_array(args.array(Arguments::read_into_f32)?)?,
-            args.effect_timer()?
-        ).into()
+            args.effect_timer()?,
+        )
+        .into()
     }
 
     pub(super) fn sweep_out(args: &mut Arguments) -> Result<Effect, DslError> {
@@ -471,8 +464,9 @@ mod compilers {
             args.read_u16()?,
             args.read_u16()?,
             args.color()?,
-            args.effect_timer()?
-        ).into()
+            args.effect_timer()?,
+        )
+        .into()
     }
 
     pub(super) fn sleep(args: &mut Arguments) -> Result<Effect, DslError> {
@@ -490,15 +484,11 @@ mod compilers {
     pub(super) fn prolong_end(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::prolong_end(args.effect_timer()?, args.effect()?).into()
     }
-    
+
     pub(super) fn remap_alpha(args: &mut Arguments) -> Result<Effect, DslError> {
-        fx::remap_alpha(
-            args.read_into_f32()?,
-            args.read_into_f32()?,
-            args.effect()?
-        ).into()
+        fx::remap_alpha(args.read_into_f32()?, args.read_into_f32()?, args.effect()?).into()
     }
-    
+
     pub(super) fn repeat(args: &mut Arguments) -> Result<Effect, DslError> {
         fx::repeat(args.effect()?, args.repeat_mode()?).into()
     }
@@ -509,8 +499,9 @@ mod compilers {
             args.read_u16()?,
             args.read_u16()?,
             args.color()?,
-            args.effect_timer()?
-        ).into()
+            args.effect_timer()?,
+        )
+        .into()
     }
 
     pub(super) fn slide_in(args: &mut Arguments) -> Result<Effect, DslError> {
@@ -519,8 +510,9 @@ mod compilers {
             args.read_u16()?,
             args.read_u16()?,
             args.color()?,
-            args.effect_timer()?
-        ).into()
+            args.effect_timer()?,
+        )
+        .into()
     }
 
     pub(super) fn slide_out(args: &mut Arguments) -> Result<Effect, DslError> {
@@ -529,15 +521,13 @@ mod compilers {
             args.read_u16()?,
             args.read_u16()?,
             args.color()?,
-            args.effect_timer()?
-        ).into()
+            args.effect_timer()?,
+        )
+        .into()
     }
 
     pub(super) fn with_duration(args: &mut Arguments) -> Result<Effect, DslError> {
-        fx::with_duration(
-            args.duration()?,
-            args.effect()?
-        ).into()
+        fx::with_duration(args.duration()?, args.effect()?).into()
     }
 
     pub(super) fn timed_never_complete(args: &mut Arguments) -> Result<Effect, DslError> {
@@ -552,7 +542,6 @@ impl fmt::Debug for EffectCompiler {
             .finish()
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -572,16 +561,15 @@ mod tests {
     use std::collections::VecDeque;
     use Interpolation::Linear;
 
-    fn assert_effect_roundtrip_eq(
-        effect: Effect,
-    ) {
+    fn assert_effect_roundtrip_eq(effect: Effect) {
         let expr = effect
             .to_dsl()
             .expect("dsl expression from effect")
             .to_string();
 
         let dsl = EffectDsl::new();
-        let actual = dsl.compiler()
+        let actual = dsl
+            .compiler()
             .compile(&expr)
             .expect("effect from compiled dsl expression");
 
@@ -631,8 +619,9 @@ mod tests {
             fx::term256_colors(),
             fx::timed_never_complete(Duration::from_millis(1000), fx::dissolve((1000, Linear))),
             fx::with_duration(Duration::from_millis(1000), fx::dissolve((1000, Linear))),
-        ].into_iter()
-            .for_each(assert_effect_roundtrip_eq);
+        ]
+        .into_iter()
+        .for_each(assert_effect_roundtrip_eq);
     }
 
     #[test]
@@ -650,7 +639,7 @@ mod tests {
             10,
             0,
             Color::from_u32(0x1d2021),
-            (Duration::from_millis(1000), QuadOut)
+            (Duration::from_millis(1000), QuadOut),
         );
 
         let effect = EffectDsl::new()
@@ -668,18 +657,18 @@ mod tests {
             10,
             0,
             Color::from_u32(0x1d2021),
-            EffectTimer::from_ms(1000, QuadOut)
+            EffectTimer::from_ms(1000, QuadOut),
         );
 
         let input = r#"fx::sweep_in(motion, 10, 0, c, (1000, QuadOut))"#;
 
         let dsl = EffectDsl::new();
-        let effect = dsl.compiler()
+        let effect = dsl
+            .compiler()
             .bind("motion", Motion::LeftToRight)
             .bind("c", Color::from_u32(0x1d2021))
             .compile(input)
             .expect("effect to be compiled");
-
 
         assert_eq!(effect.name(), "sweep_in");
         assert_eq!(format!("{effect:?}"), format!("{expected:?}"));
@@ -692,16 +681,16 @@ mod tests {
             10,
             0,
             Color::from_u32(0x1d2021),
-            EffectTimer::from_ms(1000, QuadOut)
-        ).with_filter(
-            CellFilter::Not(Box::new(CellFilter::Layout(
-                Layout::horizontal([Percentage(50), Percentage(50)])
-                    .spacing(1)
-                    .vertical_margin(1)
-                    .horizontal_margin(2),
-                1)
-            ))
-        ).with_area(Rect::new(0, 0, 10, 10));
+            EffectTimer::from_ms(1000, QuadOut),
+        )
+        .with_filter(CellFilter::Not(Box::new(CellFilter::Layout(
+            Layout::horizontal([Percentage(50), Percentage(50)])
+                .spacing(1)
+                .vertical_margin(1)
+                .horizontal_margin(2),
+            1,
+        ))))
+        .with_area(Rect::new(0, 0, 10, 10));
 
         let input = r#"fx::sweep_in(
             Motion::LeftToRight,
@@ -718,7 +707,6 @@ mod tests {
                 1)
             ))
         ).with_area(Rect::new(0, 0, 10, 10))"#;
-
 
         let effect = EffectDsl::new()
             .compiler()
@@ -743,7 +731,8 @@ mod tests {
         "#;
 
         let dsl = EffectDsl::new();
-        let effect = dsl.compiler()
+        let effect = dsl
+            .compiler()
             .compile(input)
             .expect("effect to be compiled");
 
@@ -758,7 +747,7 @@ mod tests {
                 .fg(Color::Red)
                 .bg(Color::Blue)
                 .add_modifier(Modifier::BOLD),
-            EffectTimer::from_ms(500, CircOut)
+            EffectTimer::from_ms(500, CircOut),
         );
 
         let input = r#"
@@ -788,10 +777,11 @@ mod tests {
 
     #[test]
     fn test_let_bindings_with_effect_chaining() {
-        let filter = CellFilter::AllOf(vec![CellFilter::Text, CellFilter::Outer(Margin::new(1, 1))]);
+        let filter =
+            CellFilter::AllOf(vec![CellFilter::Text, CellFilter::Outer(Margin::new(1, 1))]);
         let color = Color::from_u32(0xffaabb);
-        let expected = fx::fade_to_fg(color, EffectTimer::from_ms(1000, Linear))
-            .with_filter(filter);
+        let expected =
+            fx::fade_to_fg(color, EffectTimer::from_ms(1000, Linear)).with_filter(filter);
 
         let input = r#"
             let color = Color::from_u32(0xffaabb);
@@ -853,7 +843,8 @@ mod tests {
             fx::sequence(&[
                 base_effect.clone(),
                 base_effect.reversed(),
-                base_effect.reversed()
+                base_effect
+                    .reversed()
                     .with_filter(CellFilter::Not(Box::new(CellFilter::Text))),
             ])
         };
@@ -861,14 +852,16 @@ mod tests {
         let effect = EffectDsl::new()
             .compiler()
             .bind("base", fx::fade_to_fg(Color::Red, 500))
-            .compile(r#"
+            .compile(
+                r#"
                 let reversed = base.reversed();
                 let filtered = reversed
                     .with_filter(Not(Box::new(Text)));
 
                 let effect = fx::sequence(&[base.clone(), reversed, filtered]);
                 effect
-            "#)
+            "#,
+            )
             .expect("effect to be compiled");
 
         assert_eq!(effect.name(), "sequence");
@@ -879,15 +872,14 @@ mod tests {
     fn test_let_bindings_with_nested_effects() {
         let margin = Margin::new(1, 1);
         let expected = fx::parallel(&[
-            fx::fade_from_fg(Color::Blue, (500, CircOut))
-                .with_filter(CellFilter::Inner(margin)),
-            fx::fade_to_fg(Color::Red, (500, CircOut))
-                .with_filter(CellFilter::Outer(margin))
+            fx::fade_from_fg(Color::Blue, (500, CircOut)).with_filter(CellFilter::Inner(margin)),
+            fx::fade_to_fg(Color::Red, (500, CircOut)).with_filter(CellFilter::Outer(margin)),
         ]);
 
         let effect = EffectDsl::new()
             .compiler()
-            .compile(r#"
+            .compile(
+                r#"
                 let margin = Margin::new(1, 1);
                 let inner_effect = fx::fade_from_fg(Color::Blue, (500, CircOut))
                     .with_filter(CellFilter::Inner(margin));
@@ -895,7 +887,8 @@ mod tests {
                     .with_filter(CellFilter::Outer(margin));
 
                 fx::parallel(&[inner_effect, outer_effect])
-            "#)
+            "#,
+            )
             .expect("effect to be compiled");
 
         assert_eq!(effect.name(), "parallel");
@@ -917,11 +910,18 @@ mod tests {
         let ctx = EffectDsl::new();
         let err = ctx.compiler().compile(input).unwrap_err();
         println!("{:}", err);
-        assert!(matches!(err.source, DslError::WrongArgumentType {
-            location: _,
-            expected: "motion",
-            actual: _
-        }), "{:?}", err);
+        assert!(
+            matches!(
+                err.source,
+                DslError::WrongArgumentType {
+                    location: _,
+                    expected: "motion",
+                    actual: _
+                }
+            ),
+            "{:?}",
+            err
+        );
     }
 
     #[test]
@@ -937,7 +937,11 @@ mod tests {
 
         let ctx = EffectDsl::new();
         let err = ctx.compiler().compile(input).unwrap_err();
-        assert!(matches!(err.source, DslError::InvalidArgumentLength { .. }), "{:?}", err);
+        assert!(
+            matches!(err.source, DslError::InvalidArgumentLength { .. }),
+            "{:?}",
+            err
+        );
     }
 
     #[test]
@@ -953,8 +957,11 @@ mod tests {
     fn test_compiler_wrong_argument_type() {
         let dsl = EffectDsl::new();
         let exprs = vec![
-            Expr::Literal(Value::String("wrong".to_compact_string()), ExprSpan::new(0, 0)),
-            Expr::Literal(Value::OptionNone, ExprSpan::new(0, 0))
+            Expr::Literal(
+                Value::String("wrong".to_compact_string()),
+                ExprSpan::new(0, 0),
+            ),
+            Expr::Literal(Value::OptionNone, ExprSpan::new(0, 0)),
         ];
         let env = DslEnv::new();
         let mut args = Arguments::new(VecDeque::from(exprs), &dsl, &env, ExprSpan::default());
@@ -966,45 +973,55 @@ mod tests {
         let dsl = EffectDsl::new();
 
         for expr in [
-            "(x", "x)",
-            "[x", "x]",
-            "{x", "x}",
-            "{[x}]",
-            "[(x])",
-            "{(x})",
+            "(x", "x)", "[x", "x]", "{x", "x}", "{[x}]", "[(x])", "{(x})",
         ] {
-            let err = dsl.compiler()
+            let err = dsl
+                .compiler()
                 .compile(expr)
                 .expect_err("should fail")
                 .source;
 
-            assert!(matches!(err, DslError::BracketMismatch { .. }), "expr: {expr} - {:?}", err);
+            assert!(
+                matches!(err, DslError::BracketMismatch { .. }),
+                "expr: {expr} - {:?}",
+                err
+            );
         }
     }
-    
+
     #[test]
     fn test_missing_semicolon() {
         let dsl = EffectDsl::new();
 
         let expr = "let fx::dissolve(500) fx::dissolve(500)";
-        let err = dsl.compiler()
+        let err = dsl
+            .compiler()
             .compile(expr)
             .expect_err("should fail")
             .source;
 
-        assert!(matches!(err, DslError::MissingSemicolon { .. }), "expr: {expr} - {:?}", err);
+        assert!(
+            matches!(err, DslError::MissingSemicolon { .. }),
+            "expr: {expr} - {:?}",
+            err
+        );
     }
-    
+
     #[test]
     fn test_missing_commma() {
         let dsl = EffectDsl::new();
 
         let expr = "(1000 QuadOut)";
-        let err = dsl.compiler()
+        let err = dsl
+            .compiler()
             .compile(expr)
             .expect_err("should fail")
             .source;
 
-        assert!(matches!(err, DslError::MissingComma { .. }), "expr: {expr} - {:?}", err);
+        assert!(
+            matches!(err, DslError::MissingComma { .. }),
+            "expr: {expr} - {:?}",
+            err
+        );
     }
 }

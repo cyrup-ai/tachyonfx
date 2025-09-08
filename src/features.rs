@@ -1,13 +1,12 @@
-pub use sendable::ThreadSafetyMarker;
-pub use sendable::RefCount;
 use crate::fx::unique::UniqueContext;
-
+pub use sendable::RefCount;
+pub use sendable::ThreadSafetyMarker;
 
 #[cfg(feature = "sendable")]
 mod sendable {
     use std::sync::{Arc, Mutex};
 
-    pub trait ThreadSafetyMarker : Send {}
+    pub trait ThreadSafetyMarker: Send {}
     impl<T: Send> ThreadSafetyMarker for T {}
 
     pub type RefCount<T> = Arc<Mutex<T>>;
@@ -31,7 +30,6 @@ mod sendable {
         Rc::new(RefCell::new(value))
     }
 }
-
 
 #[cfg(feature = "sendable")]
 pub(crate) fn acquire_mut<K: Clone + ThreadSafetyMarker>(

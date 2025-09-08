@@ -13,7 +13,9 @@ pub struct Sleep {
 
 impl Sleep {
     pub fn new<T: Into<EffectTimer>>(duration: T) -> Self {
-        Self { timer: duration.into() }
+        Self {
+            timer: duration.into(),
+        }
     }
 }
 
@@ -24,7 +26,9 @@ impl Shader for Sleep {
         "sleep"
     }
 
-    fn area(&self) -> Option<Rect> { None }
+    fn area(&self) -> Option<Rect> {
+        None
+    }
     fn set_area(&mut self, _area: Rect) {}
     fn filter(&mut self, _strategy: CellFilter) {}
 
@@ -42,9 +46,10 @@ impl Shader for Sleep {
 
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
-        crate::dsl::EffectExpression::parse(
-            &format!("fx::sleep({})", self.timer.duration().as_millis())
-        )
+        crate::dsl::EffectExpression::parse(&format!(
+            "fx::sleep({})",
+            self.timer.duration().as_millis()
+        ))
     }
 }
 
@@ -59,4 +64,3 @@ mod tests {
         assert_eq!(dsl, "fx::sleep(1000)");
     }
 }
-

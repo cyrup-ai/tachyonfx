@@ -14,14 +14,18 @@ pub struct Repeat {
 
 impl Repeat {
     pub fn new(fx: Effect, mode: RepeatMode) -> Self {
-        Self { fx, mode, original_mode: mode }
+        Self {
+            fx,
+            mode,
+            original_mode: mode,
+        }
     }
 
     fn process_effect(
         &mut self,
         duration: Duration,
         buf: &mut Buffer,
-        area: Rect
+        area: Rect,
     ) -> Option<Duration> {
         match self.fx.process(duration, buf, area) {
             None => None,
@@ -68,7 +72,9 @@ impl Shader for Repeat {
                 if d < duration {
                     let overflow = duration - d;
                     self.mode = RepeatMode::Duration(Duration::ZERO);
-                    self.process_effect(d, buf, area).map(|d| Some(d + overflow)).unwrap_or(Some(overflow))
+                    self.process_effect(d, buf, area)
+                        .map(|d| Some(d + overflow))
+                        .unwrap_or(Some(overflow))
                 } else {
                     self.mode = RepeatMode::Duration(d - duration);
                     self.process_effect(duration, buf, area)
@@ -78,7 +84,10 @@ impl Shader for Repeat {
     }
 
     fn done(&self) -> bool {
-        matches!(self.mode, RepeatMode::Times(0) | RepeatMode::Duration(Duration::ZERO))
+        matches!(
+            self.mode,
+            RepeatMode::Times(0) | RepeatMode::Duration(Duration::ZERO)
+        )
     }
 
     fn clone_box(&self) -> Box<dyn Shader> {
@@ -111,8 +120,8 @@ impl Shader for Repeat {
 
     fn timer(&self) -> Option<EffectTimer> {
         match self.mode {
-            RepeatMode::Forever     => self.fx.timer(),
-            RepeatMode::Times(n)    => self.fx.timer().map(|t| t * n),
+            RepeatMode::Forever => self.fx.timer(),
+            RepeatMode::Times(n) => self.fx.timer().map(|t| t * n),
             RepeatMode::Duration(d) => Some(EffectTimer::from(d)),
         }
     }
@@ -135,7 +144,10 @@ impl Shader for Repeat {
         use crate::dsl::DslFormat;
 
         let fx = self.fx.to_dsl()?;
-        crate::dsl::EffectExpression::parse(&format!("fx::repeat({fx}, {})", self.mode.dsl_format()))
+        crate::dsl::EffectExpression::parse(&format!(
+            "fx::repeat({fx}, {})",
+            self.mode.dsl_format()
+        ))
     }
 }
 
@@ -160,7 +172,9 @@ mod tests {
             .unwrap()
             .to_string();
 
-        assert_eq!(dsl, indoc! {
+        assert_eq!(
+            dsl,
+            indoc! {
             "fx::repeat(fx::consume_tick(), RepeatMode::Forever)"}
         );
 
@@ -169,17 +183,25 @@ mod tests {
             .unwrap()
             .to_string();
 
-        assert_eq!(dsl, indoc! {
+        assert_eq!(
+            dsl,
+            indoc! {
             "fx::repeat(fx::consume_tick(), RepeatMode::Times(2))"}
         );
 
-        let dsl = repeat(consume_tick(), RepeatMode::Duration(Duration::from_millis(1)))
-            .to_dsl()
-            .unwrap()
-            .to_string();
+        let dsl = repeat(
+            consume_tick(),
+            RepeatMode::Duration(Duration::from_millis(1)),
+        )
+        .to_dsl()
+        .unwrap()
+        .to_string();
 
-        assert_eq!(dsl, indoc! {
-            "fx::repeat(fx::consume_tick(), RepeatMode::Duration(Duration::from_millis(1)))"
-        });
+        assert_eq!(
+            dsl,
+            indoc! {
+                "fx::repeat(fx::consume_tick(), RepeatMode::Duration(Duration::from_millis(1)))"
+            }
+        );
     }
 }

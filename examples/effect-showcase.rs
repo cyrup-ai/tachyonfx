@@ -6,15 +6,22 @@ mod gruvbox;
 
 use crate::gruvbox::Gruvbox;
 use ratatui::widgets::Borders;
-use ratatui::{crossterm::event::{self, Event}, prelude::*, widgets::Block, DefaultTerminal};
+use ratatui::{
+    crossterm::event::{self, Event},
+    prelude::*,
+    widgets::Block,
+    DefaultTerminal,
+};
 use tachyonfx::fx::{consume_tick, never_complete, timed_never_complete, with_duration};
-use tachyonfx::{fx, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, Shader};
+use tachyonfx::{
+    fx, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, Interpolation, Shader,
+};
 
 // these example effects are used for the tachyonfx::fx module documentation
 mod examples {
-    use ratatui::layout::Offset;
     use super::*;
-    use tachyonfx::{Motion, color_from_hsl};
+    use ratatui::layout::Offset;
+    use tachyonfx::{color_from_hsl, Motion};
 
     pub fn coalesce() -> Effect {
         fx::coalesce((1000, Interpolation::BounceOut))
@@ -40,16 +47,14 @@ mod examples {
         // fade in content, excluding borders, from the bg color
         let c = Theme::quote().bg.expect("bg color to exist");
         let filter = CellFilter::Inner(Margin::new(1, 1));
-        fx::fade_from_fg(c, (1000, Interpolation::QuadInOut))
-            .with_filter(filter)
+        fx::fade_from_fg(c, (1000, Interpolation::QuadInOut)).with_filter(filter)
     }
 
     pub fn fade_to_fg() -> Effect {
         // fade out blake by targeting the author fg color
         let c = Theme::quote().bg.expect("bg color to exist");
         let filter = CellFilter::FgColor(Theme::author().fg.unwrap());
-        fx::fade_to_fg(c, (1000, Interpolation::CircOut))
-            .with_filter(filter)
+        fx::fade_to_fg(c, (1000, Interpolation::CircOut)).with_filter(filter)
     }
 
     pub fn fade_from() -> Effect {
@@ -111,20 +116,14 @@ mod examples {
         // fade in the entire area from the out-of-bounds color
         let c = Theme::quote().bg.unwrap();
         let timer = (1000, Interpolation::CircOut);
-        fx::parallel(&[
-            fx::fade_from_fg(c, timer),
-            fx::coalesce(timer),
-        ])
+        fx::parallel(&[fx::fade_from_fg(c, timer), fx::coalesce(timer)])
     }
 
     pub fn sequence() -> Effect {
         // fade in the entire area from the out-of-bounds color
         let c = Theme::quote().bg.unwrap();
         let timer = (500, Interpolation::CircOut);
-        fx::sequence(&[
-            fx::fade_from_fg(c, timer),
-            fx::dissolve(timer),
-        ])
+        fx::sequence(&[fx::fade_from_fg(c, timer), fx::dissolve(timer)])
     }
 
     pub fn delay() -> Effect {
@@ -138,8 +137,9 @@ mod examples {
         // with_duration is used to prevent the effect from running
         // indefinitely.
         let zero_timer = 0;
-        with_duration(Duration::from_millis(1000),
-            fx::never_complete(fx::hsl_shift_fg([0.0, 0.0, 100.0], zero_timer))
+        with_duration(
+            Duration::from_millis(1000),
+            fx::never_complete(fx::hsl_shift_fg([0.0, 0.0, 100.0], zero_timer)),
         )
     }
 
@@ -198,7 +198,8 @@ mod examples {
                 }
                 cell.set_fg(Color::Indexed(((offset + i) % 256) as u8));
             }
-        }).with_filter(CellFilter::Text)
+        })
+        .with_filter(CellFilter::Text)
     }
 
     #[allow(dead_code)]
@@ -207,15 +208,12 @@ mod examples {
 
         let area = Rect::new(0, 0, 10, 10);
         let mut buf = Buffer::empty(area);
-        Block::bordered()
-            .title("translated")
-            .render(area, &mut buf);
+        Block::bordered().title("translated").render(area, &mut buf);
 
         let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
-        fx::translate_buf(Offset{ x: -30, y: 0 }, ref_count(buf), timer)
+        fx::translate_buf(Offset { x: -30, y: 0 }, ref_count(buf), timer)
     }
 }
-
 
 fn main() -> io::Result<()> {
     let wait_for_input = || never_complete(consume_tick());
@@ -250,10 +248,7 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn run_example<F: FnOnce() -> Effect>(
-    terminal: &mut DefaultTerminal,
-    effect: F
-) -> io::Result<()> {
+fn run_example<F: FnOnce() -> Effect>(terminal: &mut DefaultTerminal, effect: F) -> io::Result<()> {
     let started = Instant::now();
 
     let reset = |duration| timed_never_complete(Duration::from_millis(duration), consume_tick());
@@ -277,14 +272,19 @@ fn run_with_effect<F: FnOnce() -> Effect>(
     let mut effect = effect();
 
     let label = effect.name();
-    let label = if ["with_duration", "never_complete"].contains(&label) { "" } else { label };
+    let label = if ["with_duration", "never_complete"].contains(&label) {
+        ""
+    } else {
+        label
+    };
 
     // Main render loop:
     // - Continues until a key is pressed or the effect completes
     // - Updates timer to track animation progress
     // - Renders UI and applies the current effect
     // - Effect is applied to a centered 40x6 area
-    while poll_for_events(16) && effect.running() { // ~60 FPS; for faster transitions
+    while poll_for_events(16) && effect.running() {
+        // ~60 FPS; for faster transitions
         let elapsed: Duration = app.update_timer();
 
         terminal.draw(|f| {
@@ -302,11 +302,7 @@ fn poll_for_events(poll_timeout_ms: u64) -> bool {
         && matches!(event::read().expect("read to work"), Event::Key(_)))
 }
 
-fn render_ui(
-    f: &mut Frame<'_>,
-    area: Rect,
-    label: &str,
-) {
+fn render_ui(f: &mut Frame<'_>, area: Rect, label: &str) {
     // clear the area with the out-of-bounds color
     Block::default()
         .style(Style::default().bg(Theme::oob_color()))
@@ -322,10 +318,8 @@ fn render_ui(
 
     // the marriage of heaven and hell
     let content = Text::from(vec![
-        Line::from("You never know what is enough unless")
-            .alignment(Alignment::Center),
-        Line::from("you know what is more than enough")
-            .alignment(Alignment::Center),
+        Line::from("You never know what is enough unless").alignment(Alignment::Center),
+        Line::from("you know what is more than enough").alignment(Alignment::Center),
         Line::from(""),
         Line::from("— William Blake, Proverbs of Hell")
             .style(Theme::author())
@@ -336,7 +330,6 @@ fn render_ui(
     let content_area = area.inner(Margin::new(1, 1));
     f.render_widget(content, content_area);
 }
-
 
 struct App {
     last_frame: Instant,
@@ -360,7 +353,9 @@ impl App {
 struct Theme;
 
 impl Theme {
-    const fn oob_color() -> Color { Gruvbox::Dark0Hard.color() }
+    const fn oob_color() -> Color {
+        Gruvbox::Dark0Hard.color()
+    }
 
     fn border_style() -> Style {
         Style::default()
@@ -375,7 +370,6 @@ impl Theme {
     }
 
     fn author() -> Style {
-        Style::default()
-            .fg(Gruvbox::YellowBright.color())
+        Style::default().fg(Gruvbox::YellowBright.color())
     }
 }

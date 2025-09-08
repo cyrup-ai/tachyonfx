@@ -26,10 +26,18 @@ impl Shader for NeverComplete {
         None
     }
 
-    fn done(&self) -> bool                      { false }
-    fn clone_box(&self) -> Box<dyn Shader>      { Box::new(self.clone()) }
-    fn area(&self) -> Option<Rect>              { self.effect.area() }
-    fn set_area(&mut self, area: Rect)          { self.effect.set_area(area) }
+    fn done(&self) -> bool {
+        false
+    }
+    fn clone_box(&self) -> Box<dyn Shader> {
+        Box::new(self.clone())
+    }
+    fn area(&self) -> Option<Rect> {
+        self.effect.area()
+    }
+    fn set_area(&mut self, area: Rect) {
+        self.effect.set_area(area)
+    }
 
     fn filter(&mut self, strategy: CellFilter) {
         self.effect.filter(strategy);
@@ -79,10 +87,7 @@ mod tests {
 
     #[test]
     fn to_dsl() {
-        let dsl = never_complete(consume_tick())
-            .to_dsl()
-            .unwrap()
-            .to_string();
+        let dsl = never_complete(consume_tick()).to_dsl().unwrap().to_string();
 
         assert_eq!(dsl, "fx::never_complete(fx::consume_tick())");
     }

@@ -3,8 +3,8 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::text::Line;
-use ratatui::widgets::{Block, Borders, BorderType};
 use ratatui::widgets::Widget;
+use ratatui::widgets::{Block, BorderType, Borders};
 
 use tachyonfx::{CellFilter, Duration, Effect, EffectTimer, Shader};
 
@@ -47,12 +47,7 @@ impl Shader for OpenWindow {
         "window"
     }
 
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect
-    ) -> Option<Duration> {
+    fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         if let Some(parent_window_fx) = self.parent_window_fx.as_mut() {
             parent_window_fx.process(duration, buf, area);
             if parent_window_fx.done() {
@@ -62,11 +57,13 @@ impl Shader for OpenWindow {
 
         let overflow = match self.pre_render_fx.as_mut() {
             Some(fx) if fx.running() => fx.process(duration, buf, area),
-            _                        => Some(duration)
+            _ => Some(duration),
         };
 
         let area = if let Some(fx) = self.pre_render_fx.as_ref() {
-            fx.area().map(|a| a.intersection(buf.area)).unwrap_or(Rect::default())
+            fx.area()
+                .map(|a| a.intersection(buf.area))
+                .unwrap_or(Rect::default())
         } else {
             area
         };
@@ -83,8 +80,7 @@ impl Shader for OpenWindow {
     }
 
     fn done(&self) -> bool {
-        self.pre_render_fx.is_none()
-            || self.pre_render_fx.as_ref().is_some_and(Effect::done)
+        self.pre_render_fx.is_none() || self.pre_render_fx.as_ref().is_some_and(Effect::done)
     }
 
     fn clone_box(&self) -> Box<dyn Shader> {
@@ -92,7 +88,8 @@ impl Shader for OpenWindow {
     }
 
     fn area(&self) -> Option<Rect> {
-        self.pre_render_fx.as_ref()
+        self.pre_render_fx
+            .as_ref()
             .map(Effect::area)
             .unwrap_or(None)
     }

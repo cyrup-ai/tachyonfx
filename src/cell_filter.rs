@@ -66,7 +66,8 @@ impl CellFilter {
     /// # Type Parameters
     /// * `F` - A function type that implements the required thread safety markers
     pub fn eval_cell<F>(f: F) -> Self
-        where F: Fn(&Cell) -> bool + ThreadSafetyMarker + 'static
+    where
+        F: Fn(&Cell) -> bool + ThreadSafetyMarker + 'static,
     {
         CellFilter::EvalCell(ref_count(f))
     }
@@ -89,27 +90,28 @@ impl CellFilter {
         }
 
         fn to_string(filters: &[CellFilter]) -> String {
-            filters.iter()
+            filters
+                .iter()
                 .map(CellFilter::to_string)
                 .collect::<Vec<String>>()
                 .join(", ")
         }
 
         match self {
-            CellFilter::All             => "all".to_string(),
-            CellFilter::Area(area)      => format!("area({})", area),
-            CellFilter::FgColor(color)  => format!("fg({})", to_hex(color)),
-            CellFilter::BgColor(color)  => format!("bg({})", to_hex(color)),
-            CellFilter::Inner(m)        => format!("inner({})", format_margin(m)),
-            CellFilter::Outer(m)        => format!("outer({})", format_margin(m)),
-            CellFilter::Text            => "text".to_string(),
-            CellFilter::AllOf(filters)  => format!("all_of({})", to_string(filters)),
-            CellFilter::AnyOf(filters)  => format!("any_of({})", to_string(filters)),
+            CellFilter::All => "all".to_string(),
+            CellFilter::Area(area) => format!("area({})", area),
+            CellFilter::FgColor(color) => format!("fg({})", to_hex(color)),
+            CellFilter::BgColor(color) => format!("bg({})", to_hex(color)),
+            CellFilter::Inner(m) => format!("inner({})", format_margin(m)),
+            CellFilter::Outer(m) => format!("outer({})", format_margin(m)),
+            CellFilter::Text => "text".to_string(),
+            CellFilter::AllOf(filters) => format!("all_of({})", to_string(filters)),
+            CellFilter::AnyOf(filters) => format!("any_of({})", to_string(filters)),
             CellFilter::NoneOf(filters) => format!("none_of({})", to_string(filters)),
-            CellFilter::Not(filter)     => format!("!{}", filter.to_string()),
-            CellFilter::Layout(_, idx)  => format!("layout({})", idx),
-            CellFilter::PositionFn(_)   => "position_fn".to_string(),
-            CellFilter::EvalCell(_)     => "eval_cell".to_string(),
+            CellFilter::Not(filter) => format!("!{}", filter.to_string()),
+            CellFilter::Layout(_, idx) => format!("layout({})", idx),
+            CellFilter::PositionFn(_) => "position_fn".to_string(),
+            CellFilter::EvalCell(_) => "eval_cell".to_string(),
         }
     }
 }
@@ -144,25 +146,28 @@ impl CellPredicate {
     fn new(area: Rect, strategy: CellFilter) -> Self {
         let filter_area = Self::resolve_area(area, &strategy);
 
-        Self { filter_area, strategy }
+        Self {
+            filter_area,
+            strategy,
+        }
     }
 
     fn resolve_area(area: Rect, mode: &CellFilter) -> Rect {
         match mode {
-            CellFilter::All                 => area,
-            CellFilter::Area(r)             => area.intersection(*r),
-            CellFilter::Inner(margin)       => area.inner(*margin),
-            CellFilter::Outer(margin)       => area.inner(*margin),
-            CellFilter::Text                => area,
-            CellFilter::AllOf(_)            => area,
-            CellFilter::AnyOf(_)            => area,
-            CellFilter::NoneOf(_)           => area,
-            CellFilter::Not(m)              => Self::resolve_area(area, m.as_ref()),
-            CellFilter::FgColor(_)          => area,
-            CellFilter::BgColor(_)          => area,
+            CellFilter::All => area,
+            CellFilter::Area(r) => area.intersection(*r),
+            CellFilter::Inner(margin) => area.inner(*margin),
+            CellFilter::Outer(margin) => area.inner(*margin),
+            CellFilter::Text => area,
+            CellFilter::AllOf(_) => area,
+            CellFilter::AnyOf(_) => area,
+            CellFilter::NoneOf(_) => area,
+            CellFilter::Not(m) => Self::resolve_area(area, m.as_ref()),
+            CellFilter::FgColor(_) => area,
+            CellFilter::BgColor(_) => area,
             CellFilter::Layout(layout, idx) => layout.split(area)[*idx as usize],
-            CellFilter::PositionFn(_)       => area,
-            CellFilter::EvalCell(_)         => area,
+            CellFilter::PositionFn(_) => area,
+            CellFilter::EvalCell(_) => area,
         }
     }
 
@@ -178,39 +183,41 @@ impl CellPredicate {
     /// # Returns
     /// `true` if the cell meets all filter criteria, `false` otherwise
     pub fn is_valid(&self, pos: Position, cell: &Cell) -> bool {
-
         match &self.strategy {
-            CellFilter::All           => true,
-            CellFilter::Area(_)       => self.filter_area.contains(pos),
-            CellFilter::Layout(_, _)  => self.filter_area.contains(pos),
-            CellFilter::Inner(_)      => self.filter_area.contains(pos),
-            CellFilter::Outer(_)      => !self.filter_area.contains(pos),
-            CellFilter::Text          => {
+            CellFilter::All => true,
+            CellFilter::Area(_) => self.filter_area.contains(pos),
+            CellFilter::Layout(_, _) => self.filter_area.contains(pos),
+            CellFilter::Inner(_) => self.filter_area.contains(pos),
+            CellFilter::Outer(_) => !self.filter_area.contains(pos),
+            CellFilter::Text => {
                 let ch = cell.symbol().chars().next().unwrap();
                 ch.is_alphabetic() || ch.is_numeric() || " ?!.,:;()".contains(ch)
-            },
-            CellFilter::AllOf(s)      => s.iter()
+            }
+            CellFilter::AllOf(s) => s
+                .iter()
                 .all(|mode| mode.selector(self.filter_area).is_valid(pos, cell)),
-            CellFilter::AnyOf(s)      => s.iter()
+            CellFilter::AnyOf(s) => s
+                .iter()
                 .any(|mode| mode.selector(self.filter_area).is_valid(pos, cell)),
-            CellFilter::NoneOf(s)     => s.iter()
+            CellFilter::NoneOf(s) => s
+                .iter()
                 .all(|mode| !mode.selector(self.filter_area).is_valid(pos, cell)),
-            CellFilter::Not(m)        => !m.selector(self.filter_area).is_valid(pos, cell),
+            CellFilter::Not(m) => !m.selector(self.filter_area).is_valid(pos, cell),
             // CellFilter::Not(m)        => !self.valid_position(pos, m.as_ref()),
-            CellFilter::FgColor(c)    => cell.fg == *c,
-            CellFilter::BgColor(c)    => cell.fg == *c,
+            CellFilter::FgColor(c) => cell.fg == *c,
+            CellFilter::BgColor(c) => cell.fg == *c,
             CellFilter::PositionFn(f) => {
                 #[cfg(not(feature = "sendable"))]
                 return f.borrow()(pos);
                 #[cfg(feature = "sendable")]
                 return f.lock().unwrap()(pos);
-            },
-            CellFilter::EvalCell(f)   => {
+            }
+            CellFilter::EvalCell(f) => {
                 #[cfg(not(feature = "sendable"))]
                 return f.borrow()(cell);
                 #[cfg(feature = "sendable")]
                 return f.lock().unwrap()(cell);
-            },
+            }
         }
     }
 }
@@ -224,38 +231,22 @@ impl CellFilter {
 impl fmt::Debug for CellFilter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CellFilter::All            => write!(f, "All"),
-            CellFilter::Area(area)     => write!(f, "Area({:})", area),
+            CellFilter::All => write!(f, "All"),
+            CellFilter::Area(area) => write!(f, "Area({:})", area),
             CellFilter::FgColor(color) => write!(f, "FgColor({:?})", color),
             CellFilter::BgColor(color) => write!(f, "BgColor({:?})", color),
-            CellFilter::Inner(margin)  => write!(f, "Inner({:?})", margin),
-            CellFilter::Outer(margin)  => write!(f, "Outer({:?})", margin),
-            CellFilter::Text           => write!(f, "Text"),
-            CellFilter::AllOf(filters) => {
-                f.debug_tuple("AllOf")
-                    .field(filters)
-                    .finish()
-            },
-            CellFilter::AnyOf(filters) => {
-                f.debug_tuple("AnyOf")
-                    .field(filters)
-                    .finish()
-            },
-            CellFilter::NoneOf(filters) => {
-                f.debug_tuple("NoneOf")
-                    .field(filters)
-                    .finish()
-            },
-            CellFilter::Not(filter) => {
-                f.debug_tuple("Not")
-                    .field(filter)
-                    .finish()
-            },
+            CellFilter::Inner(margin) => write!(f, "Inner({:?})", margin),
+            CellFilter::Outer(margin) => write!(f, "Outer({:?})", margin),
+            CellFilter::Text => write!(f, "Text"),
+            CellFilter::AllOf(filters) => f.debug_tuple("AllOf").field(filters).finish(),
+            CellFilter::AnyOf(filters) => f.debug_tuple("AnyOf").field(filters).finish(),
+            CellFilter::NoneOf(filters) => f.debug_tuple("NoneOf").field(filters).finish(),
+            CellFilter::Not(filter) => f.debug_tuple("Not").field(filter).finish(),
             CellFilter::Layout(layout, idx) => {
                 write!(f, "Layout({:?}, {})", layout, idx)
-            },
+            }
             CellFilter::PositionFn(_) => write!(f, "PositionFn(<function>)"),
-            CellFilter::EvalCell(_)   => write!(f, "EvalCell(<function>)"),
+            CellFilter::EvalCell(_) => write!(f, "EvalCell(<function>)"),
         }
     }
 }
@@ -342,12 +333,7 @@ mod tests {
 
     #[test]
     fn test_cell_filter_eval() {
-        let empty = Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]);
+        let empty = Buffer::with_lines([". . . . ", ". . . . ", ". . . . ", ". . . . "]);
         let fx = effect_fn((), 1, |_, _, cells| {
             for (_, c) in cells {
                 c.set_symbol("X");
@@ -358,39 +344,40 @@ mod tests {
         let filter = CellFilter::eval_cell(|cell| cell.symbol() == ".");
 
         let area = buf.area().clone();
-        buf.render_effect(&mut fx.clone().with_filter(filter), area, Duration::from_millis(16));
+        buf.render_effect(
+            &mut fx.clone().with_filter(filter),
+            area,
+            Duration::from_millis(16),
+        );
 
-        assert_eq!(buf, Buffer::with_lines([
-            "X X X X ",
-            "X X X X ",
-            "X X X X ",
-            "X X X X ",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["X X X X ", "X X X X ", "X X X X ", "X X X X ",])
+        );
 
         let mut buf = empty.clone();
         let filter = CellFilter::Not(Box::new(CellFilter::Area(Rect::new(0, 0, 8, 2))));
-        buf.render_effect(&mut fx.clone().with_filter(filter), area, Duration::from_millis(16));
+        buf.render_effect(
+            &mut fx.clone().with_filter(filter),
+            area,
+            Duration::from_millis(16),
+        );
 
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            "XXXXXXXX",
-            "XXXXXXXX",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", "XXXXXXXX", "XXXXXXXX",])
+        );
     }
 
     #[test]
     fn test_all_any_and_none_of() {
-        fn assert_filter(
-            buf: &Buffer,
-            filter: CellFilter,
-            expected: Buffer,
-        ) {
+        fn assert_filter(buf: &Buffer, filter: CellFilter, expected: Buffer) {
             let mut mark_fx = effect_fn((), 1, |_, _, cells| {
                 for (_, c) in cells {
                     c.set_symbol("X");
                 }
-            }).with_filter(filter);
+            })
+            .with_filter(filter);
 
             let mut clear_styling = effect_fn((), 1, |_, _, cells| {
                 for (_, c) in cells {
@@ -417,23 +404,20 @@ mod tests {
             CellFilter::Inner(Margin::new(1, 1)),
         ];
 
-        assert_filter(&buf, CellFilter::AllOf(filters.clone()), Buffer::with_lines([
-            "......",
-            ".XXXX.",
-            "......",
-            "......",
-        ]));
-        assert_filter(&buf, CellFilter::AnyOf(filters.clone()), Buffer::with_lines([
-            "......",
-            "XXXXXX",
-            ".XXXX.",
-            "......",
-        ]));
-        assert_filter(&buf, CellFilter::NoneOf(filters.clone()), Buffer::with_lines([
-            "XXXXXX",
-            "......",
-            "X....X",
-            "XXXXXX",
-        ]));
+        assert_filter(
+            &buf,
+            CellFilter::AllOf(filters.clone()),
+            Buffer::with_lines(["......", ".XXXX.", "......", "......"]),
+        );
+        assert_filter(
+            &buf,
+            CellFilter::AnyOf(filters.clone()),
+            Buffer::with_lines(["......", "XXXXXX", ".XXXX.", "......"]),
+        );
+        assert_filter(
+            &buf,
+            CellFilter::NoneOf(filters.clone()),
+            Buffer::with_lines(["XXXXXX", "......", "X....X", "XXXXXX"]),
+        );
     }
 }

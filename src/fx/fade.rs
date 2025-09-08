@@ -23,7 +23,11 @@ impl Shader for FadeColors {
     default_shader_impl!(area, timer, filter, color_space, clone);
 
     fn name(&self) -> &'static str {
-        if self.timer.is_reversed() { "fade_from" } else { "fade_to" }
+        if self.timer.is_reversed() {
+            "fade_from"
+        } else {
+            "fade_to"
+        }
     }
 
     fn execute(&mut self, _: Duration, area: Rect, buf: &mut Buffer) {
@@ -35,14 +39,12 @@ impl Shader for FadeColors {
 
         cell_iter.for_each(|(_, cell)| {
             if let Some(fg) = self.fg.as_ref() {
-                let color = fg_cache
-                    .memoize(&cell.fg, |c| self.color_space.lerp(c, fg, alpha));
+                let color = fg_cache.memoize(&cell.fg, |c| self.color_space.lerp(c, fg, alpha));
                 cell.set_fg(color);
             }
 
             if let Some(bg) = self.bg.as_ref() {
-                let color = bg_cache
-                    .memoize(&cell.bg, |c| self.color_space.lerp(c, bg, alpha));
+                let color = bg_cache.memoize(&cell.bg, |c| self.color_space.lerp(c, bg, alpha));
                 cell.set_bg(color);
             }
         });
@@ -71,8 +73,6 @@ impl Shader for FadeColors {
         crate::dsl::EffectExpression::parse(&s)
     }
 }
-
-
 
 #[cfg(test)]
 #[cfg(feature = "dsl")]
@@ -105,9 +105,10 @@ mod tests {
             Color::from_u32(0),
             Color::from_u32(0),
             EffectTimer::from_ms(1000, QuadOut),
-        ).to_dsl()
-            .unwrap()
-            .to_string();
+        )
+        .to_dsl()
+        .unwrap()
+        .to_string();
 
         assert_eq!(
             dsl,
@@ -142,9 +143,10 @@ mod tests {
             Color::from_u32(0),
             Color::from_u32(0),
             EffectTimer::from_ms(1000, QuadOut),
-        ).to_dsl()
-            .unwrap()
-            .to_string();
+        )
+        .to_dsl()
+        .unwrap()
+        .to_string();
 
         assert_eq!(
             dsl,

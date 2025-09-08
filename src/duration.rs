@@ -24,11 +24,15 @@ pub mod duration {
         }
 
         pub const fn from_secs(seconds: u32) -> Self {
-            Self { milliseconds: seconds * 1000 }
+            Self {
+                milliseconds: seconds * 1000,
+            }
         }
 
         pub fn from_secs_f32(seconds: f32) -> Self {
-            Self { milliseconds: (seconds * 1000.0) as u32 }
+            Self {
+                milliseconds: (seconds * 1000.0) as u32,
+            }
         }
 
         pub fn as_millis(&self) -> u32 {
@@ -54,7 +58,9 @@ pub mod duration {
         type Output = Self;
 
         fn mul(self, rhs: u32) -> Self {
-            Self { milliseconds: self.milliseconds * rhs }
+            Self {
+                milliseconds: self.milliseconds * rhs,
+            }
         }
     }
 
@@ -62,7 +68,9 @@ pub mod duration {
         type Output = Self;
 
         fn add(self, rhs: Self) -> Self {
-            Self { milliseconds: self.milliseconds + rhs.milliseconds }
+            Self {
+                milliseconds: self.milliseconds + rhs.milliseconds,
+            }
         }
     }
 
@@ -70,7 +78,9 @@ pub mod duration {
         type Output = Self;
 
         fn add(self, rhs: u32) -> Self {
-            Self { milliseconds: self.milliseconds + rhs }
+            Self {
+                milliseconds: self.milliseconds + rhs,
+            }
         }
     }
 
@@ -90,7 +100,9 @@ pub mod duration {
         type Output = Self;
 
         fn sub(self, rhs: Self) -> Self {
-            Self { milliseconds: self.milliseconds - rhs.milliseconds }
+            Self {
+                milliseconds: self.milliseconds - rhs.milliseconds,
+            }
         }
     }
 
@@ -98,7 +110,9 @@ pub mod duration {
         type Output = Self;
 
         fn sub(self, rhs: u32) -> Self {
-            Self { milliseconds: self.milliseconds - rhs }
+            Self {
+                milliseconds: self.milliseconds - rhs,
+            }
         }
     }
 
@@ -118,7 +132,9 @@ pub mod duration {
         type Output = Duration;
 
         fn mul(self, rhs: Duration) -> Self::Output {
-            Duration { milliseconds: self * rhs.milliseconds }
+            Duration {
+                milliseconds: self * rhs.milliseconds,
+            }
         }
     }
 
@@ -126,7 +142,9 @@ pub mod duration {
         type Output = Duration;
 
         fn mul(self, rhs: f32) -> Duration {
-            Duration { milliseconds: (self.milliseconds as f32 * rhs) as u32 }
+            Duration {
+                milliseconds: (self.milliseconds as f32 * rhs) as u32,
+            }
         }
     }
 
@@ -136,18 +154,21 @@ pub mod duration {
         }
     }
 
-
     #[cfg(not(feature = "web-time"))]
     impl From<std::time::Duration> for Duration {
         fn from(d: std::time::Duration) -> Self {
-            Self { milliseconds: d.as_millis() as u32 }
+            Self {
+                milliseconds: d.as_millis() as u32,
+            }
         }
     }
 
     #[cfg(feature = "web-time")]
     impl From<web_time::Duration> for Duration {
         fn from(d: web_time::Duration) -> Self {
-            Self { milliseconds: d.as_millis() as u32 }
+            Self {
+                milliseconds: d.as_millis() as u32,
+            }
         }
     }
 
@@ -201,7 +222,10 @@ pub mod duration {
                 Duration::from_millis(200),
                 Duration::from_millis(300),
             ];
-            assert_eq!(durations.iter().copied().sum::<Duration>(), Duration::from_millis(600));
+            assert_eq!(
+                durations.iter().copied().sum::<Duration>(),
+                Duration::from_millis(600)
+            );
         }
 
         #[test]

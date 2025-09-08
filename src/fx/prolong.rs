@@ -19,11 +19,7 @@ pub struct Prolong {
 }
 
 impl Prolong {
-    pub fn new(
-        position: ProlongPosition,
-        additional_duration: EffectTimer,
-        inner: Effect,
-    ) -> Self {
+    pub fn new(position: ProlongPosition, additional_duration: EffectTimer, inner: Effect) -> Self {
         Self {
             inner,
             timer: additional_duration,
@@ -37,7 +33,7 @@ impl Shader for Prolong {
     fn name(&self) -> &'static str {
         match self.position {
             ProlongPosition::Start => "prolong_start",
-            ProlongPosition::End   => "prolong_end",
+            ProlongPosition::End => "prolong_end",
         }
     }
 
@@ -106,7 +102,7 @@ impl Shader for Prolong {
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
         let inner_offset = match self.position {
             ProlongPosition::Start => offset + self.timer.duration(),
-            ProlongPosition::End   => offset
+            ProlongPosition::End => offset,
         };
         EffectSpan::new(self, offset, vec![self.inner.as_effect_span(inner_offset)])
     }
@@ -140,24 +136,30 @@ mod tests {
     #[test]
     fn to_dsl_prolong_start() {
         let dsl = fx::prolong_start(100, consume_tick())
-        .to_dsl()
-        .unwrap()
-        .to_string();
+            .to_dsl()
+            .unwrap()
+            .to_string();
 
-        assert_eq!(dsl, indoc! {
-            "fx::prolong_start(EffectTimer::from_ms(100, Interpolation::Linear), fx::consume_tick())"
-        });
+        assert_eq!(
+            dsl,
+            indoc! {
+                "fx::prolong_start(EffectTimer::from_ms(100, Interpolation::Linear), fx::consume_tick())"
+            }
+        );
     }
 
     #[test]
     fn to_dsl_prolong_end() {
         let dsl = fx::prolong_end(100, consume_tick())
-        .to_dsl()
-        .unwrap()
-        .to_string();
+            .to_dsl()
+            .unwrap()
+            .to_string();
 
-        assert_eq!(dsl, indoc! {
-            "fx::prolong_end(EffectTimer::from_ms(100, Interpolation::Linear), fx::consume_tick())"
-        });
+        assert_eq!(
+            dsl,
+            indoc! {
+                "fx::prolong_end(EffectTimer::from_ms(100, Interpolation::Linear), fx::consume_tick())"
+            }
+        );
     }
 }

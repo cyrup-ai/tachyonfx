@@ -54,7 +54,7 @@ impl SimpleRng {
     /// A pseudo-random f32 value in the range [0, 1).
     pub fn gen_f32(&mut self) -> f32 {
         const EXPONENT: u32 = 0x3f800000; // 1.0f32
-        let mantissa = self.gen() >> 9;   // 23 bits of randomness
+        let mantissa = self.gen() >> 9; // 23 bits of randomness
 
         f32::from_bits(EXPONENT | mantissa) - 1.0
     }
@@ -116,7 +116,10 @@ impl RangeSampler<usize> for SimpleRng {
 impl RangeSampler<f32> for SimpleRng {
     fn gen_range(&mut self, range: Range<f32>) -> f32 {
         let range_size = range.end - range.start;
-        assert!(range_size > 0.0, "range.end must be greater than range.start");
+        assert!(
+            range_size > 0.0,
+            "range.end must be greater than range.start"
+        );
 
         range.start + self.gen_f32() % range_size
     }
@@ -142,8 +145,8 @@ impl RangeSampler<i32> for SimpleRng {
 
 #[cfg(test)]
 mod tests {
-    use std::panic;
     use super::*;
+    use std::panic;
 
     const RETRY_COUNT: usize = 5;
 
@@ -240,8 +243,11 @@ mod tests {
 
             let expected = num_samples / 10;
             for &count in &counts {
-                assert!((count as i32 - expected as i32).abs() < 500,
-                    "Distribution is not uniform: {:?}", counts);
+                assert!(
+                    (count as i32 - expected as i32).abs() < 500,
+                    "Distribution is not uniform: {:?}",
+                    counts
+                );
             }
         });
     }
@@ -261,8 +267,11 @@ mod tests {
 
             let expected = num_samples / 10;
             for &count in &counts {
-                assert!((count as i32 - expected as i32).abs() < 500,
-                    "Distribution is not uniform: {:?}", counts);
+                assert!(
+                    (count as i32 - expected as i32).abs() < 500,
+                    "Distribution is not uniform: {:?}",
+                    counts
+                );
             }
         });
     }
@@ -273,7 +282,10 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(10));
         let lcg2 = SimpleRng::default();
 
-        assert_ne!(lcg1.state, lcg2.state, "Default LCGs should have different seeds");
+        assert_ne!(
+            lcg1.state, lcg2.state,
+            "Default LCGs should have different seeds"
+        );
     }
 
     #[test]

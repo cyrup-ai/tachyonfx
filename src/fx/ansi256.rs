@@ -18,12 +18,7 @@ impl Shader for Ansi256 {
         "term256_colors"
     }
 
-    fn process(
-        &mut self,
-        _duration: Duration,
-        buf: &mut Buffer,
-        area: Rect,
-    ) -> Option<Duration> {
+    fn process(&mut self, _duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let mut fg_cache: LruCache<Color, Color, 4> = LruCache::default();
         let mut bg_cache: LruCache<Color, Color, 4> = LruCache::default();
 
@@ -42,7 +37,9 @@ impl Shader for Ansi256 {
         None
     }
 
-    fn done(&self) -> bool { false }
+    fn done(&self) -> bool {
+        false
+    }
 
     fn filter(&mut self, _strategy: CellFilter) {}
 

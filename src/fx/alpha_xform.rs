@@ -1,15 +1,18 @@
-use std::ops::Range;
+use crate::widget::EffectSpan;
+use crate::{
+    default_shader_impl, CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation,
+    Shader,
+};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+use std::ops::Range;
 use Interpolation::Linear;
-use crate::{default_shader_impl, CellFilter, ColorSpace, Duration, Effect, EffectTimer, Interpolation, Shader};
-use crate::widget::EffectSpan;
 
 #[derive(Debug, Clone)]
 pub struct FreezeAt {
     alpha: f32,
-    set_raw_alpha: bool, 
-    fx: Effect
+    set_raw_alpha: bool,
+    fx: Effect,
 }
 
 /// An effect that freezes another effect at a specific alpha (transition) value.
@@ -28,19 +31,19 @@ pub struct FreezeAt {
 /// let frozen_fade = fx::freeze_at(0.7, false, fade);
 /// ```
 impl FreezeAt {
-    pub fn new(
-        alpha: f32,
-        set_raw_alpha: bool,
-        fx: Effect
-    ) -> Self {
+    pub fn new(alpha: f32, set_raw_alpha: bool, fx: Effect) -> Self {
         let alpha = alpha.clamp(0.0, 1.0);
-        Self { alpha, fx, set_raw_alpha }
+        Self {
+            alpha,
+            fx,
+            set_raw_alpha,
+        }
     }
 }
 
 impl Shader for FreezeAt {
     default_shader_impl!(clone);
-    
+
     fn name(&self) -> &'static str {
         "freeze_at"
     }
@@ -49,13 +52,17 @@ impl Shader for FreezeAt {
         if let Some(t) = self.fx.timer_mut() {
             // fix alpha on first frame
             if !t.started() {
-                let interpolation = if self.set_raw_alpha { Linear } else { t.interpolation() };
+                let interpolation = if self.set_raw_alpha {
+                    Linear
+                } else {
+                    t.interpolation()
+                };
                 let d = t.remaining().as_secs_f32() * (1.0 - self.alpha);
                 *t = EffectTimer::new(t.remaining(), interpolation);
                 t.process(Duration::from_secs_f32(d));
             }
         }
-        
+
         self.fx.process(Duration::from_millis(0), buf, area)
     }
 
@@ -119,22 +126,24 @@ pub struct RemapAlpha {
     raw_alpha_range: Range<f32>,
     fx: Effect,
     timer: EffectTimer, // copy of fx timer but linear interpolation
-    rest: f32
+    rest: f32,
 }
 
 impl RemapAlpha {
-    pub fn new(
-        raw_alpha_range: Range<f32>,
-        fx: Effect,
-    ) -> Self {
+    pub fn new(raw_alpha_range: Range<f32>, fx: Effect) -> Self {
         let timer = fx.timer().clone().unwrap_or_default();
 
         let start = raw_alpha_range.start;
         let end = raw_alpha_range.end;
         let raw_alpha_range = start.clamp(0.0, 1.0)..end.clamp(0.0, 1.0);
-        
+
         let rest = 0.0;
-        Self { raw_alpha_range, fx, timer, rest }
+        Self {
+            raw_alpha_range,
+            fx,
+            timer,
+            rest,
+        }
     }
 }
 
@@ -156,8 +165,9 @@ impl Shader for RemapAlpha {
 
         let range = self.raw_alpha_range.end - self.raw_alpha_range.start;
         let scaled_duration_ms = 1_000.0 * (duration.as_secs_f32() * range) + self.rest;
-        
-        self.fx.process(Duration::from_millis(scaled_duration_ms as _), buf, area);
+
+        self.fx
+            .process(Duration::from_millis(scaled_duration_ms as _), buf, area);
         self.rest = scaled_duration_ms - scaled_duration_ms.floor();
     }
 

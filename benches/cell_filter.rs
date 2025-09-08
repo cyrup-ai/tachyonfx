@@ -1,9 +1,9 @@
 // benches/cell_filter.rs
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use ratatui::{buffer::Buffer, layout::Rect};
 use ratatui::layout::Margin;
 use ratatui::prelude::Color;
-use tachyonfx::{CellFilter, Duration, fx, Shader};
+use ratatui::{buffer::Buffer, layout::Rect};
+use tachyonfx::{fx, CellFilter, Duration, Shader};
 
 pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
     // Define a large buffer size for consistent measurement
@@ -24,7 +24,7 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
                         black_box(&buffer[(x, y)]);
                     }
                 }
-            }
+            },
         );
     });
 
@@ -44,7 +44,7 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
             },
             |(mut buffer, mut effect)| {
                 effect.process(black_box(Duration::from_millis(16)), &mut buffer, area);
-            }
+            },
         );
     });
 
@@ -59,12 +59,13 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
                         black_box(pos);
                         black_box(cell);
                     }
-                }).with_filter(CellFilter::All);
+                })
+                .with_filter(CellFilter::All);
                 (buffer, effect)
             },
             |(mut buffer, mut effect)| {
                 effect.process(black_box(Duration::from_millis(16)), &mut buffer, area);
-            }
+            },
         );
     });
 
@@ -79,7 +80,8 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
                         black_box(pos);
                         black_box(cell);
                     }
-                }).with_filter(CellFilter::AllOf(vec![
+                })
+                .with_filter(CellFilter::AllOf(vec![
                     CellFilter::FgColor(Color::Red),
                     CellFilter::Inner(Margin::new(1, 1)),
                 ]));
@@ -87,10 +89,9 @@ pub fn cell_filter_overhead_benchmark(c: &mut Criterion) {
             },
             |(mut buffer, mut effect)| {
                 effect.process(black_box(Duration::from_millis(16)), &mut buffer, area);
-            }
+            },
         );
     });
-
 
     group.finish();
 }

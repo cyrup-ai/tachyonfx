@@ -9,12 +9,12 @@ pub fn color_conversion_benchmark(c: &mut Criterion) {
     // Create a diverse set of colors to test conversions
     // Include primary, secondary, various brightness and saturation levels
     let colors = [
-        Color::Rgb(255, 0, 0),    // Red
-        Color::Rgb(0, 255, 0),    // Green
-        Color::Rgb(0, 0, 255),    // Blue
-        Color::Rgb(255, 255, 0),  // Yellow
-        Color::Rgb(255, 0, 255),  // Magenta
-        Color::Rgb(0, 255, 255),  // Cyan
+        Color::Rgb(255, 0, 0),     // Red
+        Color::Rgb(0, 255, 0),     // Green
+        Color::Rgb(0, 0, 255),     // Blue
+        Color::Rgb(255, 255, 0),   // Yellow
+        Color::Rgb(255, 0, 255),   // Magenta
+        Color::Rgb(0, 255, 255),   // Cyan
         Color::Rgb(255, 255, 255), // White
         Color::Rgb(0, 0, 0),       // Black
         Color::Rgb(128, 128, 128), // Gray

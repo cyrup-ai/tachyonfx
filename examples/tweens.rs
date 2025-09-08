@@ -3,8 +3,8 @@ use std::io::Stdout;
 use std::time::Instant;
 use std::{io, panic, vec};
 
-use crossterm::event::{Event, KeyCode, KeyEventKind};
 use crossterm::event;
+use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Constraint::Ratio;
@@ -12,11 +12,16 @@ use ratatui::layout::{Constraint, Layout, Margin, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::symbols::Marker;
 use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::{Axis, Block, Chart, Clear, Dataset, GraphType, LegendPosition, StatefulWidget, Widget};
+use ratatui::widgets::{
+    Axis, Block, Chart, Clear, Dataset, GraphType, LegendPosition, StatefulWidget, Widget,
+};
 use ratatui::Frame;
 
 use tachyonfx::fx::{parallel, repeating, sequence};
-use tachyonfx::{fx, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, EffectTimer, Interpolation, Motion, Shader};
+use tachyonfx::{
+    fx, CellFilter, CenteredShrink, Duration, Effect, EffectRenderer, EffectTimer, Interpolation,
+    Motion, Shader,
+};
 use Gruvbox::OrangeBright;
 use Interpolation::*;
 
@@ -42,7 +47,13 @@ impl App {
     fn new() -> Self {
         let tween_idx = 0;
         let shortcut_fx = repeating(sequence(&[
-            fx::sweep_in(Motion::RightToLeft, 20, 0, Dark0, EffectTimer::from_ms(1000, QuadIn)),
+            fx::sweep_in(
+                Motion::RightToLeft,
+                20,
+                0,
+                Dark0,
+                EffectTimer::from_ms(1000, QuadIn),
+            ),
             fx::sleep(5_000),
             parallel(&[
                 fx::fade_to_fg(Dark0, EffectTimer::from_ms(500, BounceOut)),
@@ -63,9 +74,7 @@ impl App {
     fn update_widget_states(&mut self, widgets: usize) {
         let to_widget_state = |i| InterpolationWidgetState::new(self.tween_idx + i);
 
-        self.widget_states = (0..widgets)
-            .map(to_widget_state)
-            .collect();
+        self.widget_states = (0..widgets).map(to_widget_state).collect();
     }
 }
 
@@ -86,10 +95,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn run_app(
-    terminal: &mut Terminal,
-    mut app: App,
-) -> io::Result<()> {
+fn run_app(terminal: &mut Terminal, mut app: App) -> io::Result<()> {
     let mut last_frame_instant = Instant::now();
     loop {
         app.last_tick = last_frame_instant.elapsed().into();
@@ -103,51 +109,51 @@ fn run_app(
                         match key.code {
                             KeyCode::Esc => return Ok(()),
                             KeyCode::Up => {
-                                app.tween_idx = app.tween_idx.checked_sub(1).unwrap_or(LAST_TWEEN_IDX);
-                                app.widget_states.iter_mut().enumerate().for_each(|(i, state)| {
-                                    state.update_interpolation(app.tween_idx + i);
-                                });
-                            },
+                                app.tween_idx =
+                                    app.tween_idx.checked_sub(1).unwrap_or(LAST_TWEEN_IDX);
+                                app.widget_states
+                                    .iter_mut()
+                                    .enumerate()
+                                    .for_each(|(i, state)| {
+                                        state.update_interpolation(app.tween_idx + i);
+                                    });
+                            }
                             KeyCode::Down => {
                                 app.tween_idx = (app.tween_idx + 1) % TWEENS;
-                                app.widget_states.iter_mut().enumerate().for_each(|(i, state)| {
-                                    state.update_interpolation(app.tween_idx + i);
-                                });
-                            },
+                                app.widget_states
+                                    .iter_mut()
+                                    .enumerate()
+                                    .for_each(|(i, state)| {
+                                        state.update_interpolation(app.tween_idx + i);
+                                    });
+                            }
                             KeyCode::Char(n) if n.is_numeric() => {
                                 let widgets = n.to_digit(10).unwrap_or(1) as usize;
                                 app.update_widget_states(widgets);
-                            },
+                            }
                             _ => {}
                         }
                     }
                 }
             }
         }
-
     }
 }
 
-fn ui(
-    f: &mut Frame,
-    app: &mut App,
-) {
-    if f.area().height == 0 { return; }
+fn ui(f: &mut Frame, app: &mut App) {
+    if f.area().height == 0 {
+        return;
+    }
 
     Clear.render(f.area(), f.buffer_mut());
     Block::default()
         .style(Style::default().fg(Light2.into()).bg(Dark0.into()))
         .render(f.area(), f.buffer_mut());
 
-    let layout = Layout::vertical(
-        vec![
-            Constraint::Min(2),
-            Constraint::Percentage(100),
-        ]
-    ).split(f.area());
+    let layout =
+        Layout::vertical(vec![Constraint::Min(2), Constraint::Percentage(100)]).split(f.area());
 
     render_shortcuts(app, f, layout[0]);
-
 
     let widgets = app.widget_states.len();
     let constraint = Ratio(1, widgets as u32);
@@ -158,8 +164,7 @@ fn ui(
         .iter()
         .zip(app.widget_states.iter_mut())
         .for_each(|(area, state)| {
-            InterpolationWidget::new(app.last_tick)
-                .render(*area, f.buffer_mut(), state);
+            InterpolationWidget::new(app.last_tick).render(*area, f.buffer_mut(), state);
         });
 }
 
@@ -167,8 +172,7 @@ fn render_shortcuts(app: &mut App, f: &mut Frame, area: Rect) {
     let shortcut_key_style = Style::default()
         .fg(OrangeBright.into())
         .add_modifier(Modifier::BOLD);
-    let shortcut_label_style = Style::default()
-        .fg(Light2.into());
+    let shortcut_label_style = Style::default().fg(Light2.into());
 
     let line = Line::from(vec![
         Span::from(" ↑/↓ ").style(shortcut_key_style),
@@ -199,13 +203,12 @@ impl InterpolationWidget {
         buffer: &mut Buffer,
         state: &mut InterpolationWidgetState,
     ) {
-        let layout = Layout::horizontal(
-            vec![
-                Constraint::Percentage(50),
-                Constraint::Min(1),
-                Constraint::Percentage(50),
-            ]
-        ).split(area.inner(Margin::new(1, 0)));
+        let layout = Layout::horizontal(vec![
+            Constraint::Percentage(50),
+            Constraint::Min(1),
+            Constraint::Percentage(50),
+        ])
+        .split(area.inner(Margin::new(1, 0)));
 
         Text::from("coalesce/dissolve")
             .style(Style::default().fg(OrangeBright.into()))
@@ -225,7 +228,7 @@ struct InterpolationWidgetState {
     coalesce_fx: Effect,
     fade_fx: Effect,
     tween_idx: usize,
-    dataset: Vec<(f64, f64)>
+    dataset: Vec<(f64, f64)>,
 }
 
 fn chart_fx() -> Effect {
@@ -259,7 +262,6 @@ impl InterpolationWidgetState {
         s
     }
 
-
     fn update_interpolation(&mut self, tween_idx: usize) {
         self.tween_idx = tween_idx;
         let tween = idx_to_tween(tween_idx);
@@ -267,10 +269,7 @@ impl InterpolationWidgetState {
         let timer = EffectTimer::from_ms(1000, tween);
 
         self.chart_fx = chart_fx();
-        self.coalesce_fx = repeating(sequence(&[
-           fx::coalesce(timer),
-           fx::dissolve(timer),
-        ]));
+        self.coalesce_fx = repeating(sequence(&[fx::coalesce(timer), fx::dissolve(timer)]));
         self.fade_fx = repeating(sequence(&[
             fx::fade_from(Dark0, Dark0, timer),
             fx::fade_to_fg(Dark0, timer),
@@ -312,21 +311,18 @@ impl InterpolationWidgetState {
 impl StatefulWidget for InterpolationWidget {
     type State = InterpolationWidgetState;
 
-    fn render(
-        self,
-        area: Rect,
-        buffer: &mut Buffer,
-        state: &mut Self::State,
-    ) {
+    fn render(self, area: Rect, buffer: &mut Buffer, state: &mut Self::State) {
         Clear.render(area, buffer);
-        Block::new().style(Style::default().bg(Dark0.into()))
+        Block::new()
+            .style(Style::default().bg(Dark0.into()))
             .render(area, buffer);
 
         let layout = Layout::vertical([
             Constraint::Percentage(100), // chart
             Constraint::Min(1),          // separator
             Constraint::Min(1),          // fx
-        ]).split(area);
+        ])
+        .split(area);
 
         let axis_x = Axis::default().title("x").bounds([0.0, 1.0]).labels([
             Line::from("0.0"),
@@ -359,16 +355,16 @@ impl StatefulWidget for InterpolationWidget {
 fn idx_to_tween(idx: usize) -> Interpolation {
     let idx = idx % TWEENS;
     match idx {
-        0  => Linear,
-        1  => Reverse,
-        2  => QuadIn,
-        3  => QuadOut,
-        4  => QuartOut,
-        5  => CubicIn,
-        6  => CubicOut,
-        7  => CubicInOut,
-        8  => QuartIn,
-        9  => QuartOut,
+        0 => Linear,
+        1 => Reverse,
+        2 => QuadIn,
+        3 => QuadOut,
+        4 => QuartOut,
+        5 => CubicIn,
+        6 => CubicOut,
+        7 => CubicInOut,
+        8 => QuartIn,
+        9 => QuartOut,
         10 => QuartInOut,
         11 => QuintIn,
         12 => QuintOut,
@@ -396,4 +392,4 @@ fn idx_to_tween(idx: usize) -> Interpolation {
 }
 
 const TWEENS: usize = 32;
-const LAST_TWEEN_IDX: usize = TWEENS -1;
+const LAST_TWEEN_IDX: usize = TWEENS - 1;

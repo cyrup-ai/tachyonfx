@@ -1,13 +1,13 @@
-use std::fmt;
-use std::fmt::Debug;
 use bon::{bon, builder, Builder};
 use compact_str::ToCompactString;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+use std::fmt;
+use std::fmt::Debug;
 
-use crate::{ref_count, CellFilter, CellIterator, Duration, EffectTimer, RefCount, Shader};
 use crate::fx::invoke_fn;
 use crate::ThreadSafetyMarker;
+use crate::{ref_count, CellFilter, CellIterator, Duration, EffectTimer, RefCount, Shader};
 
 #[derive(Builder, Clone)]
 pub struct ShaderFn<S: Clone> {
@@ -41,13 +41,15 @@ pub enum ShaderFnSignature<S> {
 
 impl<S> ShaderFnSignature<S> {
     pub fn new_iter<F>(f: F) -> Self
-        where F: FnMut(&mut S, ShaderFnContext, CellIterator) + ThreadSafetyMarker + 'static
+    where
+        F: FnMut(&mut S, ShaderFnContext, CellIterator) + ThreadSafetyMarker + 'static,
     {
         Self::Iter(ref_count(f))
     }
 
     pub fn new_buffer<F>(f: F) -> Self
-        where F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + ThreadSafetyMarker + 'static
+    where
+        F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + ThreadSafetyMarker + 'static,
     {
         Self::Buffer(ref_count(f))
     }
@@ -67,7 +69,7 @@ impl<'a> ShaderFnContext<'a> {
         area: Rect,
         filter: Option<CellFilter>,
         last_tick: Duration,
-        timer: &'a EffectTimer
+        timer: &'a EffectTimer,
     ) -> Self {
         Self {
             last_tick,
@@ -91,10 +93,11 @@ impl<S: Clone + ThreadSafetyMarker + 'static> ShaderFn<S> {
         code: F,
         timer: T,
         cell_filter: Option<CellFilter>,
-        area: Option<Rect>
+        area: Option<Rect>,
     ) -> Self
-    where F: FnMut(&mut S, ShaderFnContext, CellIterator) + ThreadSafetyMarker + 'static,
-          T: Into<EffectTimer>
+    where
+        F: FnMut(&mut S, ShaderFnContext, CellIterator) + ThreadSafetyMarker + 'static,
+        T: Into<EffectTimer>,
     {
         Self {
             name: name.unwrap_or("shader_fn"),
@@ -103,7 +106,7 @@ impl<S: Clone + ThreadSafetyMarker + 'static> ShaderFn<S> {
             code: ShaderFnSignature::new_iter(code),
             timer: timer.into(),
             cell_filter,
-            area
+            area,
         }
     }
 
@@ -114,10 +117,11 @@ impl<S: Clone + ThreadSafetyMarker + 'static> ShaderFn<S> {
         code: F,
         timer: T,
         cell_filter: Option<CellFilter>,
-        area: Option<Rect>
+        area: Option<Rect>,
     ) -> Self
-    where F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + ThreadSafetyMarker + 'static,
-          T: Into<EffectTimer>
+    where
+        F: FnMut(&mut S, ShaderFnContext, &mut Buffer) + ThreadSafetyMarker + 'static,
+        T: Into<EffectTimer>,
     {
         Self {
             name: name.unwrap_or("shader_fn"),
@@ -126,33 +130,29 @@ impl<S: Clone + ThreadSafetyMarker + 'static> ShaderFn<S> {
             code: ShaderFnSignature::new_buffer(code),
             timer: timer.into(),
             cell_filter,
-            area
+            area,
         }
     }
 }
-
 
 impl<S: Clone + ThreadSafetyMarker + 'static> Shader for ShaderFn<S> {
     fn name(&self) -> &'static str {
         self.name
     }
 
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect
-    ) -> Option<Duration> {
+    fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
         let overflow = self.timer.process(duration);
 
         match self.code.clone() {
             ShaderFnSignature::Iter(f) => {
                 let cells = self.cell_iter(buf, area);
-                let ctx = ShaderFnContext::new(area, self.cell_filter.clone(), duration, &self.timer);
+                let ctx =
+                    ShaderFnContext::new(area, self.cell_filter.clone(), duration, &self.timer);
                 invoke_fn!(f, &mut self.state, ctx, cells)
             }
             ShaderFnSignature::Buffer(f) => {
-                let ctx = ShaderFnContext::new(area, self.cell_filter.clone(), duration, &self.timer);
+                let ctx =
+                    ShaderFnContext::new(area, self.cell_filter.clone(), duration, &self.timer);
                 invoke_fn!(f, &mut self.state, ctx, buf)
             }
         }

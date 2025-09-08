@@ -1,6 +1,5 @@
-use ratatui::layout::Rect;
 use crate::{RangeSampler, SimpleRng};
-
+use ratatui::layout::Rect;
 
 /// Specifies the direction of movement for visual effects like sweeps and slides.
 ///
@@ -32,8 +31,8 @@ impl Motion {
         match self {
             Self::LeftToRight => Self::RightToLeft,
             Self::RightToLeft => Self::LeftToRight,
-            Self::UpToDown    => Self::DownToUp,
-            Self::DownToUp    => Self::UpToDown,
+            Self::UpToDown => Self::DownToUp,
+            Self::DownToUp => Self::UpToDown,
         }
     }
 
@@ -74,11 +73,7 @@ impl DirectionalVariance {
     /// # Returns
     ///
     /// A new `DirectionalVariance` instance.
-    pub(super) fn from(
-        area: Rect,
-        direction: Motion,
-        max: u16
-    ) -> Self {
+    pub(super) fn from(area: Rect, direction: Motion, max: u16) -> Self {
         Self {
             rng: SimpleRng::new(((area.width as u32) << 16) | area.height as u32),
             direction,
@@ -105,8 +100,8 @@ impl DirectionalVariance {
         match self.direction {
             Motion::LeftToRight => (variance, 0),
             Motion::RightToLeft => (-variance, 0),
-            Motion::UpToDown    => (0, variance),
-            Motion::DownToUp    => (0, -variance),
+            Motion::UpToDown => (0, variance),
+            Motion::DownToUp => (0, -variance),
         }
     }
 }

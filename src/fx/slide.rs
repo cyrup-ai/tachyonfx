@@ -35,7 +35,7 @@ impl SlideCell {
 
         match self.direction {
             Motion::LeftToRight | Motion::RightToLeft => SHRINK_H[char_idx],
-            Motion::UpToDown    | Motion::DownToUp    => SHRINK_V[char_idx],
+            Motion::UpToDown | Motion::DownToUp => SHRINK_V[char_idx],
         }
     }
 }
@@ -64,26 +64,30 @@ impl Shader for SlideCell {
 
         let mut axis_jitter = DirectionalVariance::from(area, direction, self.randomness_extent);
 
-        let update_cell = |cell: &mut Cell, pos: Position| {
-            match window_alpha.alpha(pos) {
-                0.0 => {},
-                1.0 => {
-                    cell.set_char(' ');
-                    cell.fg = cell.bg;
-                    cell.bg = self.color_behind_cell;
-                }
-                a => {
-                    cell.set_char(self.slided_cell(a));
-                    cell.fg = cell.bg;
-                    cell.bg = self.color_behind_cell;
-                }
+        let update_cell = |cell: &mut Cell, pos: Position| match window_alpha.alpha(pos) {
+            0.0 => {}
+            1.0 => {
+                cell.set_char(' ');
+                cell.fg = cell.bg;
+                cell.bg = self.color_behind_cell;
+            }
+            a => {
+                cell.set_char(self.slided_cell(a));
+                cell.fg = cell.bg;
+                cell.bg = self.color_behind_cell;
             }
         };
 
         let area = area.intersection(buf.area);
-        let cell_filter = self.cell_filter.as_ref().unwrap_or(&CellFilter::All).selector(area);
+        let cell_filter = self
+            .cell_filter
+            .as_ref()
+            .unwrap_or(&CellFilter::All)
+            .selector(area);
 
-        if self.randomness_extent == 0 || [Motion::LeftToRight, Motion::RightToLeft].contains(&direction) {
+        if self.randomness_extent == 0
+            || [Motion::LeftToRight, Motion::RightToLeft].contains(&direction)
+        {
             for y in area.y..area.bottom() {
                 let row_variance = axis_jitter.next();
                 for x in area.x..area.right() {
@@ -118,7 +122,7 @@ impl Shader for SlideCell {
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::{DslFormat, EffectExpression};
 
-        let direction = if self.timer.is_reversed() ^ self.direction.flips_timer()  {
+        let direction = if self.timer.is_reversed() ^ self.direction.flips_timer() {
             self.direction.flipped()
         } else {
             self.direction
@@ -156,45 +160,43 @@ mod tests {
 
     #[test]
     fn to_dsl_slide_in() {
-        let dsl = fx::slide_in(
-            Motion::LeftToRight,
-            10,
-            5,
-            Color::from_u32(0),
-            1000,
-        ).to_dsl().unwrap().to_string();
+        let dsl = fx::slide_in(Motion::LeftToRight, 10, 5, Color::from_u32(0), 1000)
+            .to_dsl()
+            .unwrap()
+            .to_string();
 
-
-        assert_eq!(dsl.to_string(), indoc! {
-            "fx::slide_in(
+        assert_eq!(
+            dsl.to_string(),
+            indoc! {
+                "fx::slide_in(
                  Motion::LeftToRight,
                  10,
                  5,
                  Color::from_u32(0),
                  EffectTimer::from_ms(1000, Interpolation::Linear)
              )"
-        });
+            }
+        );
     }
 
     #[test]
     fn to_dsl_slide_out() {
-        let dsl = fx::slide_out(
-            Motion::UpToDown,
-            10,
-            5,
-            Color::from_u32(0),
-            1000,
-        ).to_dsl().unwrap().to_string();
+        let dsl = fx::slide_out(Motion::UpToDown, 10, 5, Color::from_u32(0), 1000)
+            .to_dsl()
+            .unwrap()
+            .to_string();
 
-
-        assert_eq!(dsl.to_string(), indoc! {
-            "fx::slide_out(
+        assert_eq!(
+            dsl.to_string(),
+            indoc! {
+                "fx::slide_out(
                  Motion::UpToDown,
                  10,
                  5,
                  Color::from_u32(0),
                  EffectTimer::from_ms(1000, Interpolation::Linear)
              )"
-        });
+            }
+        );
     }
 }

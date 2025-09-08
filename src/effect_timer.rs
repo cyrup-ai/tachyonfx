@@ -1,6 +1,6 @@
-use std::ops::Mul;
-use crate::Duration;
 use crate::interpolation::Interpolation;
+use crate::Duration;
+use std::ops::Mul;
 
 /// A struct for managing the timing and interpolation of effects.
 /// The `EffectTimer` controls the duration and progress of an effect, allowing it to be reversed,
@@ -27,11 +27,10 @@ pub struct EffectTimer {
     remaining: Duration,
     total: Duration,
     interpolation: Interpolation,
-    reverse: bool
+    reverse: bool,
 }
 
 impl EffectTimer {
-
     /// Creates a new `EffectTimer` with the specified duration in milliseconds and interpolation method.
     ///
     /// # Arguments
@@ -46,10 +45,7 @@ impl EffectTimer {
     /// use tachyonfx::{EffectTimer, Interpolation};
     /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear);
     /// ```
-    pub fn from_ms(
-        duration: u32,
-        interpolation: Interpolation,
-    ) -> Self {
+    pub fn from_ms(duration: u32, interpolation: Interpolation) -> Self {
         Self::new(Duration::from_millis(duration as _), interpolation)
     }
 
@@ -67,15 +63,12 @@ impl EffectTimer {
     /// use tachyonfx::{Duration, EffectTimer, Interpolation};
     /// let timer = EffectTimer::new(Duration::from_millis(500), Interpolation::Linear);
     /// ```
-    pub fn new(
-        duration: Duration,
-        interpolation: Interpolation,
-    ) -> Self {
+    pub fn new(duration: Duration, interpolation: Interpolation) -> Self {
         Self {
             remaining: duration,
             total: duration,
             interpolation,
-            reverse: false
+            reverse: false,
         }
     }
 
@@ -90,7 +83,10 @@ impl EffectTimer {
     /// let timer = EffectTimer::from_ms(1000, Interpolation::Linear).reversed();
     /// ```
     pub fn reversed(self) -> Self {
-        Self { reverse: !self.reverse, ..self }
+        Self {
+            reverse: !self.reverse,
+            ..self
+        }
     }
 
     pub fn is_reversed(&self) -> bool {
@@ -144,7 +140,11 @@ impl EffectTimer {
         let remaining = self.remaining.as_millis() as f32;
         let inv_alpha = remaining / total;
 
-        let a = if self.reverse { inv_alpha } else { 1.0 - inv_alpha };
+        let a = if self.reverse {
+            inv_alpha
+        } else {
+            1.0 - inv_alpha
+        };
         self.interpolation.alpha(a)
     }
 

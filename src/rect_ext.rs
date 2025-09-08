@@ -3,7 +3,6 @@ use ratatui::layout::Rect;
 /// A trait that provides a method to calculate a centered, shrunk rectangle
 /// within the bounds of the original rectangle.
 pub trait CenteredShrink {
-
     /// Calculates a new rectangle that is centered within the original rectangle
     /// with the specified width and height.
     ///

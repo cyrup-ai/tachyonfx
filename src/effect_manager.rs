@@ -1,6 +1,8 @@
 use crate::features::acquire_mut;
 use crate::fx::unique::{Unique, UniqueContext};
-use crate::{ref_count, Duration, Effect, IntoEffect, RefCount, Shader, SimpleRng, ThreadSafetyMarker};
+use crate::{
+    ref_count, Duration, Effect, IntoEffect, RefCount, Shader, SimpleRng, ThreadSafetyMarker,
+};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use std::collections::BTreeMap;
@@ -37,7 +39,9 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
     /// to the manager to be processed.
     pub fn unique(&mut self, key: impl Into<K>, fx: impl Into<Effect>) -> Effect {
         let key = key.into();
-        let ctx = self.uniques.entry(key.clone())
+        let ctx = self
+            .uniques
+            .entry(key.clone())
             .and_modify(|ctx| acquire_mut(ctx).instance_id = self.rng.gen())
             .or_insert_with(|| ref_count(UniqueContext::new(key.clone(), self.rng.gen())))
             .clone();
@@ -87,7 +91,8 @@ impl<K: Clone + Debug + Ord + ThreadSafetyMarker> EffectManager<K> {
         });
 
         // clear orphaned unique effects;
-        self.uniques.retain(|_, ctx| RefCount::strong_count(ctx) > 1);
+        self.uniques
+            .retain(|_, ctx| RefCount::strong_count(ctx) > 1);
     }
 }
 
@@ -116,13 +121,25 @@ mod tests {
 
         // process once - should remove the first effect
         let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         assert_eq!(manager.effects.len(), 1);
 
         // process twice more - should remove the second effect
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         assert_eq!(manager.effects.len(), 0);
     }
@@ -137,7 +154,11 @@ mod tests {
 
         // process once
         let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         assert_eq!(manager.effects.len(), 1);
 
@@ -146,7 +167,11 @@ mod tests {
         manager.add_effect(effect2);
 
         // process again - the first effect should be cancelled and removed
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         // only the second effect should remain
         assert_eq!(manager.effects.len(), 1);
@@ -169,7 +194,11 @@ mod tests {
 
         // process once - the first effect should be cancelled
         let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         // only the second effect should remain
         assert_eq!(manager.effects.len(), 1);
@@ -183,7 +212,11 @@ mod tests {
         manager.add_unique_effect("test", counter_effect(1));
 
         let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         // the effect is completed and removed
         assert_eq!(manager.effects.len(), 0);
@@ -210,7 +243,11 @@ mod tests {
 
         // process - the first key1 effect should be cancelled, but key2 should remain
         let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 10));
-        manager.process_effects(Duration::from_millis(10), &mut buffer, Rect::new(0, 0, 10, 10));
+        manager.process_effects(
+            Duration::from_millis(10),
+            &mut buffer,
+            Rect::new(0, 0, 10, 10),
+        );
 
         // we should have 2 effects: the key2 effect and the new key1 effect
         assert_eq!(manager.effects.len(), 2);
@@ -225,21 +262,37 @@ mod tests {
 
     impl CounterShader {
         fn new(done_after: usize) -> Self {
-            Self { count: 0, done_after }
+            Self {
+                count: 0,
+                done_after,
+            }
         }
     }
 
     impl Shader for CounterShader {
-        fn name(&self) -> &'static str { "counter" }
+        fn name(&self) -> &'static str {
+            "counter"
+        }
 
-        fn process(&mut self, _duration: Duration, _buf: &mut Buffer, _area: Rect) -> Option<Duration> {
+        fn process(
+            &mut self,
+            _duration: Duration,
+            _buf: &mut Buffer,
+            _area: Rect,
+        ) -> Option<Duration> {
             self.count += 1;
             None
         }
 
-        fn done(&self) -> bool { self.count >= self.done_after }
-        fn clone_box(&self) -> Box<dyn Shader> { Box::new(self.clone()) }
-        fn area(&self) -> Option<Rect> { None }
+        fn done(&self) -> bool {
+            self.count >= self.done_after
+        }
+        fn clone_box(&self) -> Box<dyn Shader> {
+            Box::new(self.clone())
+        }
+        fn area(&self) -> Option<Rect> {
+            None
+        }
         fn set_area(&mut self, _area: Rect) {}
         fn filter(&mut self, _filter: CellFilter) {}
     }

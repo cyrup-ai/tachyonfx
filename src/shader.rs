@@ -1,12 +1,11 @@
-use std::fmt::Debug;
 use crate::cell_iter::CellIterator;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+use std::fmt::Debug;
 
 use crate::widget::EffectSpan;
-use crate::{CellFilter, ColorSpace, Duration, ThreadSafetyMarker};
 use crate::EffectTimer;
-
+use crate::{CellFilter, ColorSpace, Duration, ThreadSafetyMarker};
 
 /// A trait representing a shader-like object that can be processed for a duration.
 /// The `Shader` trait defines the interface for objects that can apply visual effects
@@ -46,13 +45,9 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// let mut buffer = Buffer::empty(area);
     /// let overflow = shader.process(Duration::from_millis(100), &mut buffer, area);
     /// ```
-    fn process(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect,
-    ) -> Option<Duration> {
-        let overflow= self.timer_mut()
+    fn process(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) -> Option<Duration> {
+        let overflow = self
+            .timer_mut()
             .map(|t| t.process(duration))
             .unwrap_or(None);
 
@@ -71,12 +66,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     /// * `area` - The rectangular area within the buffer where the shader will be applied.
     /// * `buf` - A mutable reference to the `Buffer` where the shader will be applied.
     #[allow(unused_variables)]
-    fn execute(
-        &mut self,
-        duration: Duration,
-        area: Rect,
-        buf: &mut Buffer,
-    ) {}
+    fn execute(&mut self, duration: Duration, area: Rect, buf: &mut Buffer) {}
 
     /// Creates an iterator over the cells in the specified area, filtered by the shader's cell filter.
     ///
@@ -86,11 +76,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     ///
     /// # Returns
     /// * A [CellIterator] over the cells in the specified area.
-    fn cell_iter<'a>(
-        &mut self,
-        buf: &'a mut Buffer,
-        area: Rect,
-    ) -> CellIterator<'a> {
+    fn cell_iter<'a>(&mut self, buf: &'a mut Buffer, area: Rect) -> CellIterator<'a> {
         CellIterator::new(buf, area, self.cell_filter())
     }
 
@@ -104,7 +90,9 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     ///
     /// # Returns
     /// * `true` if the shader is running, `false` otherwise.
-    fn running(&self) -> bool { !self.done() }
+    fn running(&self) -> bool {
+        !self.done()
+    }
 
     /// Creates a boxed clone of the shader.
     ///
@@ -164,7 +152,9 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     ///     timer.reset();
     /// }
     /// ```
-    fn timer_mut(&mut self) -> Option<&mut EffectTimer> { None }
+    fn timer_mut(&mut self) -> Option<&mut EffectTimer> {
+        None
+    }
 
     /// Returns the timer associated with this shader effect.
     ///
@@ -183,13 +173,17 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     ///   (e.g., a ping-pong effect might double the duration).
     /// - The returned timer should reflect the total expected duration of the effect, which may differ
     ///   from the current remaining time.
-    fn timer(&self) -> Option<EffectTimer> { None }
+    fn timer(&self) -> Option<EffectTimer> {
+        None
+    }
 
     /// Returns the cell selection strategy for the shader, if any.
     ///
     /// # Returns
     /// * An `Option` containing the shader's `CellFilter`, or `None` if not applicable.
-    fn cell_filter(&self) -> Option<CellFilter> { None }
+    fn cell_filter(&self) -> Option<CellFilter> {
+        None
+    }
 
     #[deprecated(since = "0.11.0", note = "Use `cell_filter()` instead")]
     fn cell_selection(&self) -> Option<CellFilter> {
@@ -201,7 +195,9 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     fn set_color_space(&mut self, color_space: ColorSpace) {}
 
     /// Gets the current color space. Returns the default color space (HSL) if not supported.
-    fn color_space(&self) -> ColorSpace { ColorSpace::default() }
+    fn color_space(&self) -> ColorSpace {
+        ColorSpace::default()
+    }
 
     /// Resets the shader effect. Used by [fx::ping_pong](fx/fn.ping_pong.html) and
     /// [fx::repeat](fx/fn.repeat.html) to reset the hosted shader effect to its initial state.
@@ -230,9 +226,7 @@ pub trait Shader: ThreadSafetyMarker + Debug {
     #[cfg(feature = "dsl")]
     fn to_dsl(&self) -> Result<crate::dsl::EffectExpression, crate::dsl::DslError> {
         use crate::dsl::DslError;
-        Err(DslError::EffectExpressionNotSupported {
-            name: self.name(),
-        })
+        Err(DslError::EffectExpressionNotSupported { name: self.name() })
     }
 
     fn as_effect_span(&self, offset: Duration) -> EffectSpan {
@@ -326,4 +320,3 @@ macro_rules! default_shader_impl {
         }
     };
 }
-

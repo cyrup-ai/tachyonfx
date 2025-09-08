@@ -1,15 +1,12 @@
-use std::fmt;
+use crate::widget::ColorResolver;
+use crate::{CellFilter, Duration, Shader};
 use ratatui::layout::Rect;
 use ratatui::prelude::Line;
 use ratatui::style::Style;
 use ratatui::text::Span;
-use crate::widget::ColorResolver;
-use crate::{CellFilter, Duration, Shader};
+use std::fmt;
 
-pub(crate) fn effect_span_tree<'a>(
-    colorizer: &ColorResolver,
-    span: &EffectSpan
-) -> Vec<Line<'a>> {
+pub(crate) fn effect_span_tree<'a>(colorizer: &ColorResolver, span: &EffectSpan) -> Vec<Line<'a>> {
     build_effect_span_tree(colorizer, span, Vec::new(), 0, span.is_leaf)
 }
 
@@ -30,16 +27,18 @@ fn build_effect_span_tree<'a>(
     // tree structure
     spans.extend((0..depth).skip(1).map(|i| {
         let indent = if i == depth - 1 {
-            if is_last { "└ " } else { "├ " }
-        } else if indent & (1 << i) != 0  {
+            if is_last {
+                "└ "
+            } else {
+                "├ "
+            }
+        } else if indent & (1 << i) != 0 {
             "│ "
         } else {
             "  "
         };
         Span::styled(indent, indent_styles[i - 1])
     }));
-
-
 
     // label
     spans.push(Span::styled(span.label.clone(), indent_styles[depth - 1]));
@@ -48,14 +47,23 @@ fn build_effect_span_tree<'a>(
     let child_count = span.children.len();
 
     for (index, child) in span.children.iter().enumerate() {
-        let new_indent = if index != child_count - 1 { indent | (1 << depth) } else { indent };
+        let new_indent = if index != child_count - 1 {
+            indent | (1 << depth)
+        } else {
+            indent
+        };
         let is_last = index == child_count - 1;
-        result.extend(build_effect_span_tree(colorizer, child, indent_styles.clone(), new_indent, is_last));
+        result.extend(build_effect_span_tree(
+            colorizer,
+            child,
+            indent_styles.clone(),
+            new_indent,
+            is_last,
+        ));
     }
 
     result
 }
-
 
 /// Represents a span of time for an effect in the effect hierarchy.
 ///

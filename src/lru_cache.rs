@@ -60,7 +60,7 @@ where
         K: Default,
         V: Default,
     {
-        assert!(N > 0,   "Cache size must be greater than 0");
+        assert!(N > 0, "Cache size must be greater than 0");
         assert!(N < 256, "Cache size must be less than 256");
         Self {
             index: array::from_fn(|_| Default::default()),
@@ -88,11 +88,10 @@ where
     /// # Returns
     ///
     /// The value associated with the key, either from the cache or newly computed
-    pub fn memoize(
-        &mut self,
-        key: &K,
-        f: impl FnOnce(&K) -> V,
-    ) -> V where V: Clone {
+    pub fn memoize(&mut self, key: &K, f: impl FnOnce(&K) -> V) -> V
+    where
+        V: Clone,
+    {
         self.memoize_ref(key, f).clone()
     }
 
@@ -112,22 +111,23 @@ where
     /// # Returns
     ///
     /// The value associated with the key, either from the cache or newly computed
-    pub fn memoize_ref(
-        &mut self,
-        key: &K,
-        f: impl FnOnce(&K) -> V,
-    ) -> &V {
+    pub fn memoize_ref(&mut self, key: &K, f: impl FnOnce(&K) -> V) -> &V {
         self.counter += 1;
         if self.counter == 0xffff {
             self.normalize();
-            self.counter = self.entries.iter()
+            self.counter = self
+                .entries
+                .iter()
                 .map(|(_, counter)| *counter)
                 .max()
                 .unwrap_or(0)
         }
 
         // Find the entry with the matching key
-        let pos = self.index.iter().enumerate()
+        let pos = self
+            .index
+            .iter()
+            .enumerate()
             .find(|(_, &ref k)| k == key)
             .map(|(i, _)| i);
 
@@ -160,18 +160,22 @@ where
     }
 
     fn normalize(&mut self) {
-        let min_offset = self.entries.iter()
+        let min_offset = self
+            .entries
+            .iter()
             .map(|(_, counter)| *counter)
             .min()
             .unwrap_or(0);
 
-        self.entries.iter_mut()
+        self.entries
+            .iter_mut()
             .for_each(|(_, counter)| *counter -= min_offset);
     }
 
     // Helper method to find the index of the least recently used entry
     fn find_lru_index(&self) -> usize {
-        self.entries.iter()
+        self.entries
+            .iter()
             .enumerate()
             .min_by(|(_, (_, a)), (_, (_, b))| a.cmp(b))
             .map(|(i, _)| i)
@@ -188,7 +192,6 @@ where
         Self::new()
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -278,11 +281,23 @@ mod tests {
 
         // Verify "a", "c", and "d" are still in the cache
         let mut compute_count = 0;
-        cache.memoize(&"a", |_| { compute_count += 1; 1 });
-        cache.memoize(&"b", |_| { compute_count += 1; 2 });
-        cache.memoize(&"d", |_| { compute_count += 1; 4 });
+        cache.memoize(&"a", |_| {
+            compute_count += 1;
+            1
+        });
+        cache.memoize(&"b", |_| {
+            compute_count += 1;
+            2
+        });
+        cache.memoize(&"d", |_| {
+            compute_count += 1;
+            4
+        });
 
-        assert_eq!(compute_count, 0, "Keys 'a', 'b', and 'd' should still be cached");
+        assert_eq!(
+            compute_count, 0,
+            "Keys 'a', 'b', and 'd' should still be cached"
+        );
     }
 
     #[test]
@@ -306,7 +321,10 @@ mod tests {
             1
         });
 
-        assert_eq!(compute_count, 0, "Key 'a' should have been retained during normalization");
+        assert_eq!(
+            compute_count, 0,
+            "Key 'a' should have been retained during normalization"
+        );
     }
 
     #[test]
@@ -319,8 +337,14 @@ mod tests {
 
         let mut cache: LruCache<ComplexKey, Vec<i32>, 3> = LruCache::new();
 
-        let key1 = ComplexKey { id: "test".to_string(), section: 1 };
-        let key2 = ComplexKey { id: "test".to_string(), section: 2 };
+        let key1 = ComplexKey {
+            id: "test".to_string(),
+            section: 1,
+        };
+        let key2 = ComplexKey {
+            id: "test".to_string(),
+            section: 2,
+        };
 
         cache.memoize(&key1, |_| vec![1, 2, 3]);
         cache.memoize(&key2, |_| vec![4, 5, 6]);

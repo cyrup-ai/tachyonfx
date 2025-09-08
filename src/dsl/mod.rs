@@ -1,15 +1,15 @@
-mod dsl;
 mod arguments;
-mod environment;
-mod expressions;
+mod dsl;
 mod dsl_format;
-mod method_chains;
-mod tokenizer;
-mod token_parsers;
-mod expr_promotion;
 mod dsl_writer;
+mod environment;
+mod expr_promotion;
+mod expressions;
+mod method_chains;
 mod parse_error;
+mod token_parsers;
 mod token_verification;
+mod tokenizer;
 
 use crate::dsl::expressions::{Expr, ExprSpan};
 use compact_str::CompactString;
@@ -22,13 +22,10 @@ pub use dsl::{DslCompiler, EffectDsl};
 pub use dsl_format::DslFormat;
 use dsl_writer::DslWriter;
 
-
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum DslError {
     #[error("Failed to tokenize the input at position {location}. Check for invalid characters or syntax.")]
-    TokenizationError {
-        location: ExprSpan,
-    },
+    TokenizationError { location: ExprSpan },
 
     #[error("Failed to parse expression at position {location}. This could be due to unexpected tokens or invalid syntax.")]
     TokenParseError { location: ExprSpan },
@@ -37,10 +34,18 @@ pub enum DslError {
     OhNoError,
 
     #[error("Unknown effect '{name}'. Check the effect name or register the effect with EffectDsl::register.")]
-    UnknownEffect { name: CompactString, location: ExprSpan },
+    UnknownEffect {
+        name: CompactString,
+        location: ExprSpan,
+    },
 
-    #[error("Variable '{name}' not found. Make sure it's declared before use with 'let {name} = ...'.")]
-    UnknownArgument { name: CompactString, location: ExprSpan },
+    #[error(
+        "Variable '{name}' not found. Make sure it's declared before use with 'let {name} = ...'."
+    )]
+    UnknownArgument {
+        name: CompactString,
+        location: ExprSpan,
+    },
 
     #[error("Cannot find variable '{name}' of type {expected}.")]
     NoSuchVariable {
@@ -63,7 +68,10 @@ pub enum DslError {
     },
 
     #[error("Unknown struct '{name}'. Check the struct name or import the required module.")]
-    UnknownStruct { name: CompactString, location: ExprSpan },
+    UnknownStruct {
+        name: CompactString,
+        location: ExprSpan,
+    },
 
     #[error("Unknown field '{field}' in struct '{struct_name}'. Valid fields are {valid_fields}.")]
     UnknownField {
@@ -98,18 +106,14 @@ pub enum DslError {
     BracketMismatch {
         bracket: char,
         location: ExprSpan,
-        bracket_type: &'static str,  // "opening" or "closing"
+        bracket_type: &'static str, // "opening" or "closing"
     },
 
     #[error("Missing semicolon after let statement. Add a ';' to terminate the statement.")]
-    MissingSemicolon {
-        location: ExprSpan,
-    },
+    MissingSemicolon { location: ExprSpan },
 
     #[error("Missing comma between elements. Add a ',' to separate items in the list.")]
-    MissingComma {
-        location: ExprSpan,
-    },
+    MissingComma { location: ExprSpan },
 
     #[error("{message}")]
     SyntaxError {
@@ -135,13 +139,11 @@ pub enum DslError {
     TooManyArguments {
         name: CompactString,
         count: usize,
-        location: ExprSpan
+        location: ExprSpan,
     },
 
     #[error("The effect '{name}' cannot be converted to DSL format.")]
-    EffectExpressionNotSupported {
-        name: &'static str,
-    },
+    EffectExpressionNotSupported { name: &'static str },
 
     #[error("The effect '{name}' can not be instantiated by the DSL.")]
     UnsupportedEffect {
@@ -162,8 +164,6 @@ pub enum DslError {
         location: ExprSpan,
     },
 }
-
-
 
 /// A parsed representation of a tachyonfx effect expression.
 ///
@@ -196,7 +196,6 @@ pub struct EffectExpression {
     expr: Vec<Expr>,
 }
 
-
 impl EffectExpression {
     /// Parses a string into an `EffectExpression`.
     ///
@@ -214,9 +213,7 @@ impl EffectExpression {
     /// - `Ok(EffectExpression)` if parsing was successful
     /// - `Err(DslError)` if the input could not be parsed
     pub fn parse(input: &str) -> Result<Self, DslError> {
-        let expr = tokenize(input)
-            .map(sanitize_tokens)
-            .and_then(parse_ast)?;
+        let expr = tokenize(input).map(sanitize_tokens).and_then(parse_ast)?;
 
         Ok(Self { expr })
     }
@@ -224,7 +221,9 @@ impl EffectExpression {
 
 impl fmt::Display for EffectExpression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let dsl = self.expr.iter()
+        let dsl = self
+            .expr
+            .iter()
             .map(DslWriter::format)
             .collect::<Vec<_>>()
             .join("\n");
@@ -259,13 +258,11 @@ mod tests {
 
         let expr = fx::sequence(&[
             fx::dissolve(100),
-            fx::parallel(&[
-                fx::dissolve(200),
-                fx::dissolve(300),
-                fx::sleep(400),
-            ]),
+            fx::parallel(&[fx::dissolve(200), fx::dissolve(300), fx::sleep(400)]),
             fx::repeat(fx::dissolve(500), RepeatMode::Forever),
-        ]).to_dsl().expect("dsl expression from effect");
+        ])
+        .to_dsl()
+        .expect("dsl expression from effect");
 
         assert_eq!(expr.to_string(), expected);
     }

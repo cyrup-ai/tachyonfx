@@ -7,7 +7,7 @@ use ratatui::style::Color;
 #[deprecated(since = "0.12.0", note = "Use `tachyonfx::LruCache` instead")]
 pub struct ColorMapper {
     original: (Color, f32),
-    transformed: Color
+    transformed: Color,
 }
 
 #[allow(deprecated)]
@@ -40,7 +40,7 @@ impl ColorMapper {
         &mut self,
         from_color: Color,
         alpha: f32,
-        transform: impl Fn(Color) -> Color
+        transform: impl Fn(Color) -> Color,
     ) -> Color {
         if self.original != (from_color, alpha) {
             self.original = (from_color, alpha);

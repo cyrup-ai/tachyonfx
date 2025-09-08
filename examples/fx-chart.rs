@@ -1,6 +1,6 @@
 use crate::effects::{effect_in, transition_fx};
-use crossterm::event::{Event, KeyCode, KeyEventKind};
 use crossterm::event;
+use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Offset, Rect};
@@ -19,7 +19,6 @@ use tachyonfx::{BufferRenderer, Duration, Effect, Shader};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 type Terminal = ratatui::Terminal<CrosstermBackend<Stdout>>;
-
 
 struct App {
     sender: mpsc::Sender<AppEvent>,
@@ -40,14 +39,10 @@ impl Effects {
         self.post_process = Some(effect);
     }
 
-    fn process_active_fx(
-        &mut self,
-        duration: Duration,
-        buf: &mut Buffer,
-        area: Rect
-    ) {
-        self.post_process.iter_mut()
-            .for_each(|effect| { effect.process(duration, buf, area); });
+    fn process_active_fx(&mut self, duration: Duration, buf: &mut Buffer, area: Rect) {
+        self.post_process.iter_mut().for_each(|effect| {
+            effect.process(duration, buf, area);
+        });
 
         if self.post_process.iter().all(Effect::done) {
             self.post_process = None;
@@ -56,10 +51,7 @@ impl Effects {
 }
 
 impl App {
-    fn new(
-        sender: mpsc::Sender<AppEvent>,
-        aux_buffer_area: Rect,
-    ) -> Self {
+    fn new(sender: mpsc::Sender<AppEvent>, aux_buffer_area: Rect) -> Self {
         Self {
             sender,
             is_running: true,
@@ -79,15 +71,13 @@ impl App {
         let area = self.aux_buffer.borrow().area;
         let fx = transition_fx(area, self.sender.clone(), effect_in(idx, areas));
 
-        EffectTimeline::builder()
-            .effect(&fx)
-            .build()
+        EffectTimeline::builder().effect(&fx).build()
     }
 
     fn inspected_transition_effect(&self) -> Effect {
         let area = self.aux_buffer.borrow().area;
         let layout = self.effect_timeline(baseline_rects()).layout(area);
-        transition_fx(area,  self.sender.clone(), self.inspected_effect(layout))
+        transition_fx(area, self.sender.clone(), self.inspected_effect(layout))
     }
 
     fn refresh_aux_buffer(&self) {
@@ -119,13 +109,13 @@ impl App {
                     self.inspected_effect_no = (self.inspected_effect_no + 1) % 3;
                     // sends RefreshAufBuffer after transitioning out
                     effects.push(self.inspected_transition_effect())
-                },
+                }
                 _ => (),
             },
             AppEvent::RefreshAufBuffer => {
                 self.refresh_aux_buffer();
-            },
-            AppEvent::Resize(r) => self.screen_area = r
+            }
+            AppEvent::Resize(r) => self.screen_area = r,
         }
     }
 }
@@ -145,17 +135,12 @@ mod effects {
         sender: mpsc::Sender<AppEvent>,
         fx_in: Effect,
     ) -> Effect {
-
         // refresh buffer after transitioning out
         let update_inspected_effect = effect_fn_buf((), 1, move |_, _, _| {
             sender.send(AppEvent::RefreshAufBuffer).unwrap();
         });
 
-        sequence(&[
-            out_fx_1(screen),
-            update_inspected_effect,
-            fx_in,
-        ])
+        sequence(&[out_fx_1(screen), update_inspected_effect, fx_in])
     }
 
     pub(super) fn effect_in(idx: u8, areas: EffectTimelineRects) -> Effect {
@@ -194,10 +179,14 @@ mod effects {
         let step = Duration::from_millis(100);
         let bg = Color::Black;
 
-        with_duration(step * 7, parallel(&[
-            never_complete(dissolve((step * 5, ExpoInOut))),
-            never_complete(fade_to_fg(bg, (5 * step, BounceOut))),
-        ]).with_area(area))
+        with_duration(
+            step * 7,
+            parallel(&[
+                never_complete(dissolve((step * 5, ExpoInOut))),
+                never_complete(fade_to_fg(bg, (5 * step, BounceOut))),
+            ])
+            .with_area(area),
+        )
     }
 
     fn tree_fx_1(area: Rect) -> Effect {
@@ -205,18 +194,17 @@ mod effects {
         let bg = Color::Black;
 
         parallel(&[
-            coalesce((step * 5, ExpoInOut))
-                .with_filter(CellFilter::Text),
+            coalesce((step * 5, ExpoInOut)).with_filter(CellFilter::Text),
             sweep_in(Motion::UpToDown, 1, 0, bg, step * 3),
-        ]).with_area(area)
+        ])
+        .with_area(area)
     }
 
     fn chart_fx_1(area: Rect) -> Effect {
         let step = Duration::from_millis(100);
         let bg = Color::Black;
 
-        prolong_start(step * 4, sweep_in(Motion::RightToLeft, 5, 0, bg, step * 3))
-            .with_area(area)
+        prolong_start(step * 4, sweep_in(Motion::RightToLeft, 5, 0, bg, step * 3)).with_area(area)
     }
 
     fn chart_fx_2(area: Rect) -> Effect {
@@ -235,8 +223,9 @@ mod effects {
                     slide_in(Motion::DownToUp, 15, 30, color2, step * 5),
                     fade_from_fg(color1, (step * 10, ExpoOut)),
                 ]),
-            ])
-        ]).with_area(area)
+            ]),
+        ])
+        .with_area(area)
     }
 
     fn chart_fx_3(area: Rect) -> Effect {
@@ -248,23 +237,29 @@ mod effects {
         parallel(&[
             hsl_shift_fg(hsl_shift, (15 * step, CircIn)).reversed(),
             sweep_in(Motion::LeftToRight, 80, 30, bg, step * 15),
-        ]).with_area(area)
+        ])
+        .with_area(area)
     }
 
     pub fn cell_filter_and_area_fx(
         cell_filter_column: Rect,
         area_column: Rect,
-        legend: Rect
+        legend: Rect,
     ) -> Effect {
         let d = Duration::from_millis(500);
 
         parallel(&[
-            prolong_start(d, sweep_in(Motion::DownToUp, 1, 0, Color::Black, (d, QuadOut)))
-                .with_area(cell_filter_column),
-            prolong_start(d * 2, sweep_in(Motion::UpToDown, 1, 0, Color::Black, (d, QuadOut)))
-                .with_area(area_column),
-            prolong_start(d * 3,  fade_from_fg(Color::Black, (700, QuadOut)))
-                .with_area(legend),
+            prolong_start(
+                d,
+                sweep_in(Motion::DownToUp, 1, 0, Color::Black, (d, QuadOut)),
+            )
+            .with_area(cell_filter_column),
+            prolong_start(
+                d * 2,
+                sweep_in(Motion::UpToDown, 1, 0, Color::Black, (d, QuadOut)),
+            )
+            .with_area(area_column),
+            prolong_start(d * 3, fade_from_fg(Color::Black, (700, QuadOut))).with_area(legend),
         ])
     }
 }
@@ -291,11 +286,7 @@ fn main() -> Result<()> {
 
 pub type AuxBuffer = Rc<RefCell<Buffer>>;
 
-fn run_app(
-    terminal: &mut Terminal,
-    mut app: App,
-    event_handler: EventHandler,
-) -> io::Result<()> {
+fn run_app(terminal: &mut Terminal, mut app: App, event_handler: EventHandler) -> io::Result<()> {
     let mut last_frame_instant = std::time::Instant::now();
 
     let mut effects = Effects::default();
@@ -316,13 +307,11 @@ fn run_app(
     Ok(())
 }
 
-fn  ui(
-    f: &mut Frame,
-    app: &App,
-    effects: &mut Effects
-) {
+fn ui(f: &mut Frame, app: &App, effects: &mut Effects) {
     let rect = f.area();
-    if rect.area() == 0 { return; }
+    if rect.area() == 0 {
+        return;
+    }
 
     let buf: &mut Buffer = f.buffer_mut();
     Clear.render(rect, buf);
@@ -330,8 +319,7 @@ fn  ui(
     let shortcut_key_style = Style::default()
         .fg(Color::DarkGray)
         .add_modifier(Modifier::BOLD);
-    let shortcut_label_style = Style::default()
-        .fg(Color::DarkGray);
+    let shortcut_label_style = Style::default().fg(Color::DarkGray);
 
     app.aux_buffer.render_buffer(Offset::default(), buf);
     effects.process_active_fx(app.last_tick, buf, rect);
@@ -364,7 +352,7 @@ enum AppEvent {
 pub struct EventHandler {
     sender: mpsc::Sender<AppEvent>,
     receiver: mpsc::Receiver<AppEvent>,
-    _handler: thread::JoinHandle<()>
+    _handler: thread::JoinHandle<()>,
 }
 
 impl EventHandler {
@@ -387,7 +375,8 @@ impl EventHandler {
                     }
 
                     if last_tick.elapsed() >= tick_rate {
-                        sender.send(AppEvent::Tick)
+                        sender
+                            .send(AppEvent::Tick)
                             .expect("failed to send tick event");
 
                         last_tick = std::time::Instant::now();
@@ -396,7 +385,11 @@ impl EventHandler {
             })
         };
 
-        Self { sender, receiver, _handler: handler }
+        Self {
+            sender,
+            receiver,
+            _handler: handler,
+        }
     }
 
     pub(crate) fn sender(&self) -> mpsc::Sender<AppEvent> {
@@ -412,20 +405,24 @@ impl EventHandler {
     }
 
     pub(crate) fn receive_events<F>(&self, mut f: F)
-        where F: FnMut(AppEvent)
+    where
+        F: FnMut(AppEvent),
     {
         f(self.next().unwrap());
-        while let Some(event) = self.try_next() { f(event) }
+        while let Some(event) = self.try_next() {
+            f(event)
+        }
     }
 
     fn apply_event(sender: &mpsc::Sender<AppEvent>) {
         match event::read().expect("unable to read event") {
-            Event::Key(e) if e.kind == KeyEventKind::Press =>
-                sender.send(AppEvent::KeyPressed(e.code)),
-            Event::Resize(w, h) =>
-                sender.send(AppEvent::Resize(Rect::new(0, 0, w, h))),
-            _ => Ok(())
-        }.expect("failed to send event")
+            Event::Key(e) if e.kind == KeyEventKind::Press => {
+                sender.send(AppEvent::KeyPressed(e.code))
+            }
+            Event::Resize(w, h) => sender.send(AppEvent::Resize(Rect::new(0, 0, w, h))),
+            _ => Ok(()),
+        }
+        .expect("failed to send event")
     }
 }
 

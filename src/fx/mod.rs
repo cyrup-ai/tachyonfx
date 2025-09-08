@@ -108,31 +108,31 @@ pub use shader_fn::*;
 use slide::SlideCell;
 pub use temporary::IntoTemporaryEffect;
 
+mod alpha_xform;
 mod ansi256;
 mod consume_tick;
 pub(crate) mod containers;
+mod direction;
 mod dissolve;
+mod explode;
 mod fade;
 mod glitch;
+mod hsl_shift;
 mod never_complete;
+mod offscreen_buffer;
 mod ping_pong;
+mod prolong;
 mod repeat;
 mod resize;
+mod shader_fn;
 mod sleep;
+mod slide;
+mod sliding_window_alpha;
 mod sweep_in;
 mod temporary;
 mod translate;
 mod translate_buffer;
-mod hsl_shift;
-mod shader_fn;
-mod slide;
-mod sliding_window_alpha;
-mod offscreen_buffer;
-mod prolong;
-mod direction;
 pub(crate) mod unique;
-mod explode;
-mod alpha_xform;
 
 /// Creates a custom effect using a user-defined function.
 ///
@@ -332,10 +332,7 @@ pub fn hsl_shift<T: Into<EffectTimer>>(
 /// let fg_shift = [120.0, 25.0, 25.0];
 /// fx::hsl_shift(Some(fg_shift), None, timer);
 /// ```
-pub fn hsl_shift_fg<T: Into<EffectTimer>>(
-    hsl_fg_change: [f32; 3],
-    timer: T,
-) -> Effect {
+pub fn hsl_shift_fg<T: Into<EffectTimer>>(hsl_fg_change: [f32; 3], timer: T) -> Effect {
     hsl_shift(Some(hsl_fg_change), None, timer)
 }
 
@@ -381,11 +378,7 @@ pub fn term256_colors() -> Effect {
 ///     fx::explode(15.0, 2.0, timer),
 /// ]);
 /// ```
-pub fn explode(
-    force: f32,
-    force_rng_factor: f32,
-    timer: impl Into<EffectTimer>,
-) -> Effect {
+pub fn explode(force: f32, force_rng_factor: f32, timer: impl Into<EffectTimer>) -> Effect {
     let mut replacement_cell = Cell::default();
     replacement_cell.set_fg(Color::Black);
     replacement_cell.set_bg(Color::Black);
@@ -403,11 +396,7 @@ pub fn explode(
 /// # Returns
 ///
 /// An `Effect` that shows the inner effect frozen at the specified alpha
-pub fn freeze_at(
-    alpha: f32,
-    set_raw_alpha: bool,
-    effect: Effect,
-) -> Effect {
+pub fn freeze_at(alpha: f32, set_raw_alpha: bool, effect: Effect) -> Effect {
     FreezeAt::new(alpha, set_raw_alpha, effect).into_effect()
 }
 
@@ -428,11 +417,7 @@ pub fn freeze_at(
 /// # Returns
 ///
 /// A new effect that remaps the original effect's alpha progression to the specified range.
-pub fn remap_alpha(
-    alpha_start: f32,
-    alpha_end: f32,
-    effect: Effect,
-) -> Effect {
+pub fn remap_alpha(alpha_start: f32, alpha_end: f32, effect: Effect) -> Effect {
     let range = alpha_start.max(0.0)..alpha_end.min(1.0);
     RemapAlpha::new(range, effect).into_effect()
 }
@@ -517,8 +502,14 @@ pub fn sweep_out<T: Into<EffectTimer>, C: Into<Color>>(
     faded_color: C,
     timer: T,
 ) -> Effect {
-    sweep_in(direction.flipped(), gradient_length, randomness, faded_color, timer)
-        .reversed()
+    sweep_in(
+        direction.flipped(),
+        gradient_length,
+        randomness,
+        faded_color,
+        timer,
+    )
+    .reversed()
 }
 
 /// Creates an effect that sweeps in from a specified color with optional randomness.
@@ -603,8 +594,14 @@ pub fn sweep_in<T: Into<EffectTimer>, C: Into<Color>>(
     faded_color: C,
     timer: T,
 ) -> Effect {
-    SweepIn::new(direction, gradient_length, randomness, faded_color.into(), timer.into())
-        .into_effect()
+    SweepIn::new(
+        direction,
+        gradient_length,
+        randomness,
+        faded_color.into(),
+        timer.into(),
+    )
+    .into_effect()
 }
 
 /// Creates an effect that slides terminal cells in from a specified direction with a gradient.
@@ -645,8 +642,14 @@ pub fn slide_in<T: Into<EffectTimer>, C: Into<Color>>(
     color_behind_cells: C,
     timer: T,
 ) -> Effect {
-    slide_out(direction.flipped(), gradient_length, randomness, color_behind_cells, timer)
-        .reversed()
+    slide_out(
+        direction.flipped(),
+        gradient_length,
+        randomness,
+        color_behind_cells,
+        timer,
+    )
+    .reversed()
 }
 
 /// Creates an effect that slides terminal cells out to a specified direction with a gradient.
@@ -690,8 +693,8 @@ pub fn slide_out<T: Into<EffectTimer>, C: Into<Color>>(
     let timer = match direction {
         Motion::LeftToRight => timer,
         Motion::RightToLeft => timer.reversed(),
-        Motion::UpToDown    => timer,
-        Motion::DownToUp    => timer.reversed(),
+        Motion::UpToDown => timer,
+        Motion::DownToUp => timer.reversed(),
     };
 
     SlideCell::builder()
@@ -889,7 +892,7 @@ pub fn sequence(effects: &[Effect]) -> Effect {
 /// ```no_run
 /// use ratatui::prelude::Color;
 /// use tachyonfx::*;
-/// 
+///
 /// let c = Color::from_u32(0x504945);
 /// let timer = (1000, Interpolation::CircOut);
 /// fx::parallel(&[
@@ -918,8 +921,7 @@ pub fn parallel(effects: &[Effect]) -> Effect {
 /// fx::dissolve(1000); // linear interpolation
 /// ```
 pub fn dissolve<T: Into<EffectTimer>>(timer: T) -> Effect {
-    Dissolve::new(timer.into())
-        .into_effect()
+    Dissolve::new(timer.into()).into_effect()
 }
 
 /// Dissolves both the text and background to the specified style over the specified duration.
@@ -930,8 +932,7 @@ pub fn dissolve<T: Into<EffectTimer>>(timer: T) -> Effect {
 /// * `timer` - Controls the duration and interpolation of the effect
 /// * `style` - The target style to dissolve to
 pub fn dissolve_to<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
-    Dissolve::with_style(style, timer.into())
-        .into_effect()
+    Dissolve::with_style(style, timer.into()).into_effect()
 }
 
 /// The reverse of [dissolve()].
@@ -948,8 +949,7 @@ pub fn dissolve_to<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
 /// fx::coalesce((1000, Interpolation::BounceOut));
 /// ```
 pub fn coalesce<T: Into<EffectTimer>>(timer: T) -> Effect {
-    Dissolve::new(timer.into().reversed())
-        .into_effect()
+    Dissolve::new(timer.into().reversed()).into_effect()
 }
 
 /// Reforms both the text and background to the specified style over the specified duration.
@@ -976,8 +976,7 @@ pub fn coalesce<T: Into<EffectTimer>>(timer: T) -> Effect {
 /// fx::coalesce_from(style, (1000, Interpolation::ExpoInOut));
 /// ```
 pub fn coalesce_from<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
-    Dissolve::with_style(style, timer.into().reversed())
-        .into_effect()
+    Dissolve::with_style(style, timer.into().reversed()).into_effect()
 }
 
 /// Fades the foreground color to the specified color over the specified duration.
@@ -999,10 +998,7 @@ pub fn coalesce_from<T: Into<EffectTimer>>(style: Style, timer: T) -> Effect {
 /// ```
 ///
 /// Fade out blake by targeting the author fg color.
-pub fn fade_to_fg<T: Into<EffectTimer>, C: Into<Color>>(
-    fg: C,
-    timer: T,
-) -> Effect {
+pub fn fade_to_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effect {
     fade(Some(fg), None, timer.into(), false)
 }
 
@@ -1024,10 +1020,7 @@ pub fn fade_to_fg<T: Into<EffectTimer>, C: Into<Color>>(
 ///     .filter(filter);
 /// ```
 /// Fade in content, excluding borders, from the bg color.
-pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(
-    fg: C,
-    timer: T,
-) -> Effect {
+pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(fg: C, timer: T) -> Effect {
     fade(Some(fg), None, timer.into(), true)
 }
 
@@ -1048,11 +1041,7 @@ pub fn fade_from_fg<T: Into<EffectTimer>, C: Into<Color>>(
 /// ```
 ///
 /// Fade the entire area to the out-of-bounds color.
-pub fn fade_to<T: Into<EffectTimer>, C: Into<Color>>(
-    fg: C,
-    bg: C,
-    timer: T,
-) -> Effect {
+pub fn fade_to<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> Effect {
     fade(Some(fg), Some(bg), timer.into(), false)
 }
 
@@ -1072,11 +1061,7 @@ pub fn fade_to<T: Into<EffectTimer>, C: Into<Color>>(
 /// ```
 ///
 /// fade in the entire area from the out-of-bounds color
-pub fn fade_from<T: Into<EffectTimer>, C: Into<Color>>(
-    fg: C,
-    bg: C,
-    timer: T,
-) -> Effect {
+pub fn fade_from<T: Into<EffectTimer>, C: Into<Color>>(fg: C, bg: C, timer: T) -> Effect {
     fade(Some(fg), Some(bg), timer.into(), true)
 }
 
@@ -1280,13 +1265,7 @@ pub fn timed_never_complete(duration: Duration, effect: Effect) -> Effect {
     TemporaryEffect::new(never_complete(effect), duration).into_effect()
 }
 
-
-fn fade<C: Into<Color>>(
-    fg: Option<C>,
-    bg: Option<C>,
-    timer: EffectTimer,
-    reverse: bool,
-) -> Effect {
+fn fade<C: Into<Color>>(fg: Option<C>, bg: Option<C>, timer: EffectTimer, reverse: bool) -> Effect {
     if fg.is_none() && bg.is_none() {
         panic!("At least one of fg or bg must be provided");
     }
@@ -1299,7 +1278,6 @@ fn fade<C: Into<Color>>(
         .build()
         .into_effect()
 }
-
 
 #[cfg(feature = "sendable")]
 macro_rules! invoke_fn {
@@ -1317,9 +1295,9 @@ macro_rules! invoke_fn {
     };
 }
 
-pub (crate) use invoke_fn;
 use crate::fx::alpha_xform::{FreezeAt, RemapAlpha};
 use crate::fx::explode::Explode;
+pub(crate) use invoke_fn;
 
 #[cfg(test)]
 mod tests {
@@ -1336,25 +1314,16 @@ mod tests {
 
     #[test]
     fn test_name_fade() {
-        assert_eq!(
-            fade_to(Color::Red, Color::Green, 1000).name(),
-            "fade_to"
-        );
+        assert_eq!(fade_to(Color::Red, Color::Green, 1000).name(), "fade_to");
 
-        assert_eq!(
-            fade_from_fg(Color::Red, 1000).name(),
-            "fade_from"
-        );
+        assert_eq!(fade_from_fg(Color::Red, 1000).name(), "fade_from");
 
         assert_eq!(
             fade_to(Color::Red, Color::Green, 1000).reversed().name(),
             "fade_from"
         );
 
-        assert_eq!(
-            fade_from_fg(Color::Red, 1000).reversed().name(),
-            "fade_to"
-        );
+        assert_eq!(fade_from_fg(Color::Red, 1000).reversed().name(), "fade_to");
     }
 
     #[test]
@@ -1362,26 +1331,38 @@ mod tests {
         let c = Color::Red;
 
         DIRECTIONS.iter().for_each(|dir| {
-            assert_eq!(sweep_out(*dir, 1, 0, c, 1000).name(), "sweep_out",
-                "testing for direction={:?}", dir
+            assert_eq!(
+                sweep_out(*dir, 1, 0, c, 1000).name(),
+                "sweep_out",
+                "testing for direction={:?}",
+                dir
             );
         });
 
         DIRECTIONS.iter().for_each(|dir| {
-            assert_eq!(sweep_out(*dir, 1, 0, c, 1000).reversed().name(), "sweep_in",
-                "testing reversed() for direction={:?}", dir
+            assert_eq!(
+                sweep_out(*dir, 1, 0, c, 1000).reversed().name(),
+                "sweep_in",
+                "testing reversed() for direction={:?}",
+                dir
             );
         });
 
         DIRECTIONS.iter().for_each(|dir| {
-            assert_eq!(sweep_in(*dir, 1, 0, c, 1000).name(), "sweep_in",
-                "testing for direction={:?}", dir
+            assert_eq!(
+                sweep_in(*dir, 1, 0, c, 1000).name(),
+                "sweep_in",
+                "testing for direction={:?}",
+                dir
             );
         });
 
         DIRECTIONS.iter().for_each(|dir| {
-            assert_eq!(sweep_in(*dir, 1, 0, c, 1000).reversed().name(), "sweep_out",
-                "testing reversed() for direction={:?}", dir
+            assert_eq!(
+                sweep_in(*dir, 1, 0, c, 1000).reversed().name(),
+                "sweep_out",
+                "testing reversed() for direction={:?}",
+                dir
             );
         });
     }
@@ -1398,26 +1379,38 @@ mod tests {
         ];
 
         directions.iter().for_each(|dir| {
-            assert_eq!(slide_out(*dir, 1, 0, c, 1000).name(), "slide_out",
-                "testing for direction={:?}", dir
+            assert_eq!(
+                slide_out(*dir, 1, 0, c, 1000).name(),
+                "slide_out",
+                "testing for direction={:?}",
+                dir
             );
         });
 
         directions.iter().for_each(|dir| {
-            assert_eq!(slide_out(*dir, 1, 0, c, 1000).reversed().name(), "slide_in",
-                "testing reversed() for direction={:?}", dir
+            assert_eq!(
+                slide_out(*dir, 1, 0, c, 1000).reversed().name(),
+                "slide_in",
+                "testing reversed() for direction={:?}",
+                dir
             );
         });
 
         directions.iter().for_each(|dir| {
-            assert_eq!(slide_in(*dir, 1, 0, c, 1000).name(), "slide_in",
-                "testing for direction={:?}", dir
+            assert_eq!(
+                slide_in(*dir, 1, 0, c, 1000).name(),
+                "slide_in",
+                "testing for direction={:?}",
+                dir
             );
         });
 
         directions.iter().for_each(|dir| {
-            assert_eq!(slide_in(*dir, 1, 0, c, 1000).reversed().name(), "slide_out",
-                "testing reversed() for direction={:?}", dir
+            assert_eq!(
+                slide_in(*dir, 1, 0, c, 1000).reversed().name(),
+                "slide_out",
+                "testing reversed() for direction={:?}",
+                dir
             );
         });
     }
@@ -1432,27 +1425,27 @@ mod tests {
 
         use crate::fx::{offscreen_buffer::OffscreenBuffer, translate::Translate};
 
-        verify_size(size_of::<EffectTimer>(),      12);
-        verify_size(size_of::<Ansi256>(),          10);
-        verify_size(size_of::<ConsumeTick>(),       1);
-        verify_size(size_of::<Dissolve>(),         88);
-        verify_size(size_of::<FadeColors>(),       80);
-        verify_size(size_of::<Glitch>(),          112);
-        verify_size(size_of::<HslShift>(),        104);
-        verify_size(size_of::<NeverComplete>(),    16);
-        verify_size(size_of::<OffscreenBuffer>(),  24);
-        verify_size(size_of::<ParallelEffect>(),   24);
-        verify_size(size_of::<PingPong>(),         72);
-        verify_size(size_of::<Prolong>(),          32);
-        verify_size(size_of::<Repeat>(),           32);
-        verify_size(size_of::<ResizeArea>(),       56);
+        verify_size(size_of::<EffectTimer>(), 12);
+        verify_size(size_of::<Ansi256>(), 10);
+        verify_size(size_of::<ConsumeTick>(), 1);
+        verify_size(size_of::<Dissolve>(), 88);
+        verify_size(size_of::<FadeColors>(), 80);
+        verify_size(size_of::<Glitch>(), 112);
+        verify_size(size_of::<HslShift>(), 104);
+        verify_size(size_of::<NeverComplete>(), 16);
+        verify_size(size_of::<OffscreenBuffer>(), 24);
+        verify_size(size_of::<ParallelEffect>(), 24);
+        verify_size(size_of::<PingPong>(), 72);
+        verify_size(size_of::<Prolong>(), 32);
+        verify_size(size_of::<Repeat>(), 32);
+        verify_size(size_of::<ResizeArea>(), 56);
         verify_size(size_of::<SequentialEffect>(), 32);
-        verify_size(size_of::<ShaderFn<()>>(),    112);
-        verify_size(size_of::<Sleep>(),            12);
-        verify_size(size_of::<SlideCell>(),        80);
-        verify_size(size_of::<SweepIn>(),          80);
-        verify_size(size_of::<TemporaryEffect>(),  32);
-        verify_size(size_of::<Translate>(),        72);
-        verify_size(size_of::<TranslateBuffer>(),  32);
+        verify_size(size_of::<ShaderFn<()>>(), 112);
+        verify_size(size_of::<Sleep>(), 12);
+        verify_size(size_of::<SlideCell>(), 80);
+        verify_size(size_of::<SweepIn>(), 80);
+        verify_size(size_of::<TemporaryEffect>(), 32);
+        verify_size(size_of::<Translate>(), 72);
+        verify_size(size_of::<TranslateBuffer>(), 32);
     }
 }

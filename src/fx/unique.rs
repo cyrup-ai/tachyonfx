@@ -1,5 +1,7 @@
 use crate::features::acquire_ref;
-use crate::{CellFilter, ColorSpace, Duration, Effect, EffectTimer, RefCount, Shader, ThreadSafetyMarker};
+use crate::{
+    CellFilter, ColorSpace, Duration, Effect, EffectTimer, RefCount, Shader, ThreadSafetyMarker,
+};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use std::fmt::Debug;

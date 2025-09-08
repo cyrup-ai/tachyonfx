@@ -1,5 +1,5 @@
-use std::fmt;
 use crate::dsl::DslError;
+use std::fmt;
 
 /// Provides detailed information about errors that occurred while parsing or compiling
 /// DSL expressions, including location information and context.
@@ -29,10 +29,7 @@ struct Location {
 }
 
 impl DslParseError {
-    pub(super) fn new(
-        input: &str,
-        cause: DslError,
-    ) -> Self {
+    pub(super) fn new(input: &str, cause: DslError) -> Self {
         let location = if let Some(span) = cause.span() {
             // Calculate line and column information
             let mut start_line = 1;
@@ -120,18 +117,27 @@ impl DslParseError {
 
         for (i, line) in lines[start_idx..end_idx].iter().enumerate() {
             let line_num = start_idx + i + 1;
-            let line_indicator = if line_num >= self.location.start_line && line_num <= self.location.end_line {
-                ">"
-            } else {
-                " "
-            };
+            let line_indicator =
+                if line_num >= self.location.start_line && line_num <= self.location.end_line {
+                    ">"
+                } else {
+                    " "
+                };
 
             result.push_str(&format!("{:>2} {} | {}\n", line_indicator, line_num, line));
 
             // Add underline for error location
             if line_num >= self.location.start_line && line_num <= self.location.end_line {
-                let start_col = if line_num == self.location.start_line { self.location.start_column } else { 1 };
-                let end_col = if line_num == self.location.end_line { self.location.end_column } else { line.len() + 1 };
+                let start_col = if line_num == self.location.start_line {
+                    self.location.start_column
+                } else {
+                    1
+                };
+                let end_col = if line_num == self.location.end_line {
+                    self.location.end_column
+                } else {
+                    line.len() + 1
+                };
 
                 let padding = " ".repeat(7);
                 let leading_space = " ".repeat(start_col.saturating_sub(1));
@@ -189,15 +195,25 @@ impl DslParseError {
 impl fmt::Display for DslParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.location.start_line == self.location.end_line {
-            writeln!(f, "Error at line {}:{} to {}:{}: {}",
-                self.location.start_line, self.location.start_column,
-                self.location.end_line, self.location.end_column,
-                self.source)?;
+            writeln!(
+                f,
+                "Error at line {}:{} to {}:{}: {}",
+                self.location.start_line,
+                self.location.start_column,
+                self.location.end_line,
+                self.location.end_column,
+                self.source
+            )?;
         } else {
-            writeln!(f, "Error from line {}:{} to line {}:{}: {}",
-                self.location.start_line, self.location.start_column,
-                self.location.end_line, self.location.end_column,
-                self.source)?;
+            writeln!(
+                f,
+                "Error from line {}:{} to line {}:{}: {}",
+                self.location.start_line,
+                self.location.start_column,
+                self.location.end_line,
+                self.location.end_column,
+                self.source
+            )?;
         }
 
         write!(f, "{}", self.context())

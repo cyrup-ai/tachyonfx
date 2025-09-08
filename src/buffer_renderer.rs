@@ -1,8 +1,8 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Offset, Position, Positions, Rect};
 use ratatui::style::{Color, Modifier, Style};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 /// A trait for rendering the contents of one buffer onto another.
 ///
@@ -17,7 +17,6 @@ use ratatui::style::{Color, Modifier, Style};
 /// of the provided buffer. The `offset` parameter is used to correctly
 /// position the rendered content within the target buffer.
 pub trait BufferRenderer {
-
     /// Renders the contents of this buffer onto the provided buffer.
     ///
     /// # Arguments
@@ -31,26 +30,22 @@ pub trait BufferRenderer {
 
 impl BufferRenderer for Rc<RefCell<Buffer>> {
     fn render_buffer(&self, offset: Offset, buf: &mut Buffer) {
-        (*self.as_ref().borrow())
-            .render_buffer(offset, buf);
+        (*self.as_ref().borrow()).render_buffer(offset, buf);
     }
 
     fn render_buffer_region(&self, src_region: Rect, offset: Offset, buf: &mut Buffer) {
-        (*self.as_ref().borrow())
-            .render_buffer_region(src_region, offset, buf);
+        (*self.as_ref().borrow()).render_buffer_region(src_region, offset, buf);
     }
 }
 
 #[cfg(feature = "sendable")]
 impl BufferRenderer for crate::RefCount<Buffer> {
     fn render_buffer(&self, offset: Offset, buf: &mut Buffer) {
-        (*self.lock().unwrap())
-            .render_buffer(offset, buf);
+        (*self.lock().unwrap()).render_buffer(offset, buf);
     }
 
     fn render_buffer_region(&self, src_region: Rect, offset: Offset, buf: &mut Buffer) {
-        (*self.lock().unwrap())
-            .render_buffer_region(src_region, offset, buf);
+        (*self.lock().unwrap()).render_buffer_region(src_region, offset, buf);
     }
 }
 
@@ -85,11 +80,7 @@ impl BufferRenderer for Buffer {
 ///   destination buffer, no copying occurs.
 /// - The function clips the source buffer as necessary to fit within the destination buffer.
 /// - Negative offsets are handled by adjusting the starting position in the source buffer.
-pub fn blit_buffer(
-    src: &Buffer,
-    dst: &mut Buffer,
-    offset: Offset,
-) {
+pub fn blit_buffer(src: &Buffer, dst: &mut Buffer, offset: Offset) {
     blit_buffer_region(src, src.area, dst, offset);
 }
 
@@ -117,12 +108,7 @@ pub fn blit_buffer(
 ///   destination buffer, no copying occurs.
 /// - The function clips the source region as necessary to fit within the destination buffer.
 /// - Negative offsets are handled by adjusting the starting position in the source buffer.
-pub fn blit_buffer_region(
-    src: &Buffer,
-    src_region: Rect,
-    dst: &mut Buffer,
-    offset: Offset,
-) {
+pub fn blit_buffer_region(src: &Buffer, src_region: Rect, dst: &mut Buffer, offset: Offset) {
     // clip source region to source buffer bounds
     let src_region = src_region.intersection(src.area);
 
@@ -231,24 +217,24 @@ fn escape_code_of(style: Style) -> String {
 fn color_code(color: Color, foreground: bool) -> String {
     let base = if foreground { 38 } else { 48 };
     match color {
-        Color::Reset        => "\x1b[0m".to_string(),
-        Color::Black        => format!("\x1b[{};5;0m", base),
-        Color::Red          => format!("\x1b[{};5;1m", base),
-        Color::Green        => format!("\x1b[{};5;2m", base),
-        Color::Yellow       => format!("\x1b[{};5;3m", base),
-        Color::Blue         => format!("\x1b[{};5;4m", base),
-        Color::Magenta      => format!("\x1b[{};5;5m", base),
-        Color::Cyan         => format!("\x1b[{};5;6m", base),
-        Color::Gray         => format!("\x1b[{};5;7m", base),
-        Color::DarkGray     => format!("\x1b[{};5;8m", base),
-        Color::LightRed     => format!("\x1b[{};5;9m", base),
-        Color::LightGreen   => format!("\x1b[{};5;10m", base),
-        Color::LightYellow  => format!("\x1b[{};5;11m", base),
-        Color::LightBlue    => format!("\x1b[{};5;12m", base),
+        Color::Reset => "\x1b[0m".to_string(),
+        Color::Black => format!("\x1b[{};5;0m", base),
+        Color::Red => format!("\x1b[{};5;1m", base),
+        Color::Green => format!("\x1b[{};5;2m", base),
+        Color::Yellow => format!("\x1b[{};5;3m", base),
+        Color::Blue => format!("\x1b[{};5;4m", base),
+        Color::Magenta => format!("\x1b[{};5;5m", base),
+        Color::Cyan => format!("\x1b[{};5;6m", base),
+        Color::Gray => format!("\x1b[{};5;7m", base),
+        Color::DarkGray => format!("\x1b[{};5;8m", base),
+        Color::LightRed => format!("\x1b[{};5;9m", base),
+        Color::LightGreen => format!("\x1b[{};5;10m", base),
+        Color::LightYellow => format!("\x1b[{};5;11m", base),
+        Color::LightBlue => format!("\x1b[{};5;12m", base),
         Color::LightMagenta => format!("\x1b[{};5;13m", base),
-        Color::LightCyan    => format!("\x1b[{};5;14m", base),
-        Color::White        => format!("\x1b[{};5;15m", base),
-        Color::Indexed(i)   => format!("\x1b[{};5;{}m", base, i),
+        Color::LightCyan => format!("\x1b[{};5;14m", base),
+        Color::White => format!("\x1b[{};5;15m", base),
+        Color::Indexed(i) => format!("\x1b[{};5;{}m", base, i),
         Color::Rgb(r, g, b) => format!("\x1b[{};2;{};{};{}m", base, r, g, b),
     }
 }
@@ -260,11 +246,7 @@ struct ClipRegion {
 }
 
 impl ClipRegion {
-    fn new(
-        src_region: Rect,
-        dst_bounds: Rect,
-        dst_offset: Offset
-    ) -> Self {
+    fn new(src_region: Rect, dst_bounds: Rect, dst_offset: Offset) -> Self {
         let x_offset = dst_offset.x.min(0).unsigned_abs() as u16;
         let y_offset = dst_offset.y.min(0).unsigned_abs() as u16;
 
@@ -272,7 +254,7 @@ impl ClipRegion {
             dst_offset.x.max(0) as u16,
             dst_offset.y.max(0) as u16,
             src_region.width,
-            src_region.height
+            src_region.height,
         );
 
         // adjust source and destination regions based on clipping and bounds
@@ -285,7 +267,12 @@ impl ClipRegion {
             .min(src_region.height);
 
         Self {
-            src: Rect::new(src_region.x + x_offset, src_region.y + y_offset, width, height),
+            src: Rect::new(
+                src_region.x + x_offset,
+                src_region.y + y_offset,
+                width,
+                height,
+            ),
             dst: Rect::new(dst.x, dst.y, width, height),
         }
     }
@@ -317,29 +304,15 @@ impl ClipRegion {
 
 #[cfg(test)]
 mod tests {
-    use ratatui::buffer::Buffer;
-    use crate::ref_count;
     use super::*;
+    use crate::ref_count;
+    use ratatui::buffer::Buffer;
 
-    fn assert_buffer_to_buffer_copy(
-        offset: Offset,
-        expected: Buffer,
-    ) {
-        let aux_buffer = ref_count(Buffer::with_lines([
-            "abcd",
-            "efgh",
-            "ijkl",
-            "mnop",
-        ]));
+    fn assert_buffer_to_buffer_copy(offset: Offset, expected: Buffer) {
+        let aux_buffer = ref_count(Buffer::with_lines(["abcd", "efgh", "ijkl", "mnop"]));
 
         let mut buf = Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
+            ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ",
             ". . . . ",
         ]);
 
@@ -353,29 +326,17 @@ mod tests {
         assert_buffer_to_buffer_copy(
             Offset { x: 0, y: 0 },
             Buffer::with_lines([
-                "abcd. . ",
-                "efgh. . ",
-                "ijkl. . ",
-                "mnop. . ",
+                "abcd. . ", "efgh. . ", "ijkl. . ", "mnop. . ", ". . . . ", ". . . . ", ". . . . ",
                 ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-            ])
+            ]),
         );
 
         assert_buffer_to_buffer_copy(
             Offset { x: 4, y: 3 },
             Buffer::with_lines([
+                ". . . . ", ". . . . ", ". . . . ", ". . abcd", ". . efgh", ". . ijkl", ". . mnop",
                 ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . abcd",
-                ". . efgh",
-                ". . ijkl",
-                ". . mnop",
-                ". . . . ",
-            ])
+            ]),
         );
     }
 
@@ -384,28 +345,16 @@ mod tests {
         assert_buffer_to_buffer_copy(
             Offset { x: -1, y: -2 },
             Buffer::with_lines([
-                "jkl . . ",
-                "nop . . ",
+                "jkl . . ", "nop . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ",
                 ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-            ])
+            ]),
         );
         assert_buffer_to_buffer_copy(
             Offset { x: 6, y: 6 },
             Buffer::with_lines([
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . . ",
-                ". . . ab",
+                ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . ab",
                 ". . . ef",
-            ])
+            ]),
         );
     }
 
@@ -420,162 +369,158 @@ mod tests {
             "FFFFFFFFFF",
         ]));
 
-        let buffer = || Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]);
+        let buffer = || Buffer::with_lines([". . . . ", ". . . . ", ". . . . "]);
 
         // Test with no vertical offset
         let mut buf = buffer();
         aux_buffer.render_buffer(Offset::default(), &mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            "AAAAAAAA",
-            "BBBBBBBB",
-            "CCCCCCCC",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["AAAAAAAA", "BBBBBBBB", "CCCCCCCC",])
+        );
 
         // Test with positive vertical offset
         let mut buf = buffer();
         aux_buffer.render_buffer(Offset { x: 0, y: 2 }, &mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            "AAAAAAAA",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", "AAAAAAAA",])
+        );
 
         // Test with negative vertical offset
         let mut buf = buffer();
         aux_buffer.render_buffer(Offset { x: 0, y: -2 }, &mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            "CCCCCCCC",
-            "DDDDDDDD",
-            "EEEEEEEE",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["CCCCCCCC", "DDDDDDDD", "EEEEEEEE",])
+        );
 
         // Test with both horizontal and vertical offset
         let mut buf = buffer();
         aux_buffer.render_buffer(Offset { x: 2, y: 1 }, &mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". AAAAAA",
-            ". BBBBBB",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". AAAAAA", ". BBBBBB",])
+        );
 
         // Test with out-of-bounds vertical offset
         let mut buf = buffer();
         aux_buffer.render_buffer(Offset { x: 0, y: 6 }, &mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", ". . . . ",])
+        );
 
         // Test with large negative vertical and horizontal offset
         let mut buf = buffer();
         aux_buffer.render_buffer(Offset { x: -5, y: -5 }, &mut buf);
-        assert_eq!(buf, Buffer::with_lines([
-            "FFFFF . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["FFFFF . ", ". . . . ", ". . . . ",])
+        );
     }
 
     #[test]
     fn test_blit_buffer_region() {
-        let buffer = || Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]);
+        let buffer =
+            || Buffer::with_lines([". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . "]);
 
-        let aux_buffer = Buffer::with_lines([
-            "abcd",
-            "efgh",
-            "ijkl",
-            "mnop",
-        ]);
+        let aux_buffer = Buffer::with_lines(["abcd", "efgh", "ijkl", "mnop"]);
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(1, 1, 2, 2), &mut buf, Offset::default());
-        assert_eq!(buf, Buffer::with_lines([
-            "fg. . . ",
-            "jk. . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(
+            &aux_buffer,
+            Rect::new(1, 1, 2, 2),
+            &mut buf,
+            Offset::default(),
+        );
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["fg. . . ", "jk. . . ", ". . . . ", ". . . . ", ". . . . ",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(1, 1, 2, 2), &mut buf, Offset { x: 4, y: 2 });
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . fg. ",
-            ". . jk. ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(
+            &aux_buffer,
+            Rect::new(1, 1, 2, 2),
+            &mut buf,
+            Offset { x: 4, y: 2 },
+        );
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", ". . fg. ", ". . jk. ", ". . . . ",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(1, 1, 3, 3), &mut buf, Offset { x: -1, y: -1 });
-        assert_eq!(buf, Buffer::with_lines([
-            "kl. . . ",
-            "op. . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(
+            &aux_buffer,
+            Rect::new(1, 1, 3, 3),
+            &mut buf,
+            Offset { x: -1, y: -1 },
+        );
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["kl. . . ", "op. . . ", ". . . . ", ". . . . ", ". . . . ",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(2, 2, 3, 3), &mut buf, Offset::default());
-        assert_eq!(buf, Buffer::with_lines([
-            "kl. . . ",
-            "op. . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(
+            &aux_buffer,
+            Rect::new(2, 2, 3, 3),
+            &mut buf,
+            Offset::default(),
+        );
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["kl. . . ", "op. . . ", ". . . . ", ". . . . ", ". . . . ",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(0, 0, 2, 2), &mut buf, Offset { x: 6, y: 3 });
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . ab",
-            ". . . ef",
-        ]));
+        blit_buffer_region(
+            &aux_buffer,
+            Rect::new(0, 0, 2, 2),
+            &mut buf,
+            Offset { x: 6, y: 3 },
+        );
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", ". . . . ", ". . . ab", ". . . ef",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(0, 0, 2, 2), &mut buf, Offset { x: 8, y: 8 });
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(
+            &aux_buffer,
+            Rect::new(0, 0, 2, 2),
+            &mut buf,
+            Offset { x: 8, y: 8 },
+        );
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(1, 1, 0, 0), &mut buf, Offset::default());
-        assert_eq!(buf, Buffer::with_lines([
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(
+            &aux_buffer,
+            Rect::new(1, 1, 0, 0),
+            &mut buf,
+            Offset::default(),
+        );
+        assert_eq!(
+            buf,
+            Buffer::with_lines([". . . . ", ". . . . ", ". . . . ", ". . . . ", ". . . . ",])
+        );
 
         let mut buf = buffer();
-        blit_buffer_region(&aux_buffer, Rect::new(0, 0, 4, 4), &mut buf, Offset::default());
-        assert_eq!(buf, Buffer::with_lines([
-            "abcd. . ",
-            "efgh. . ",
-            "ijkl. . ",
-            "mnop. . ",
-            ". . . . ",
-        ]));
+        blit_buffer_region(
+            &aux_buffer,
+            Rect::new(0, 0, 4, 4),
+            &mut buf,
+            Offset::default(),
+        );
+        assert_eq!(
+            buf,
+            Buffer::with_lines(["abcd. . ", "efgh. . ", "ijkl. . ", "mnop. . ", ". . . . ",])
+        );
     }
 }
